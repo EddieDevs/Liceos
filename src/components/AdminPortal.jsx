@@ -1,39 +1,44 @@
 import React, { useState } from 'react';
 import {
-  ShieldAlert,
   CreditCard,
   Users,
   GraduationCap,
   Calendar,
-  School,
-  Clock,
-  PlusCircle,
+  Building,
+  Award,
+  BookOpen,
+  Plus,
   Edit2,
   Trash2,
-  CheckCircle2,
-  XCircle,
-  Search,
-  Filter,
-  ExternalLink,
-  ChevronRight,
-  Send,
-  Building,
-  Bell,
   Check,
-  X
+  X,
+  Printer,
+  ChevronRight,
+  ShieldCheck,
+  Clock,
+  Coffee,
+  CalendarOff,
+  Bell,
+  Search,
+  ExternalLink
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import CertificateModal from './CertificateModal';
+import ReportCardModal from './ReportCardModal';
 
 export default function AdminPortal() {
   const {
     currentUser,
-    adminUser,
     institution,
     students,
     teachersList,
     addTeacher,
     updateTeacher,
     deleteTeacher,
+    subjects,
+    addSubject,
+    updateSubject,
+    deleteSubject,
     schedules,
     addScheduleBlock,
     updateScheduleBlock,
@@ -42,313 +47,343 @@ export default function AdminPortal() {
     addClassroom,
     payments,
     updatePaymentStatus,
-    attendances,
-    recordAttendance,
+    certificates,
+    addCertificate,
+    updateCertificate,
+    deleteCertificate,
+    grades,
     announcements,
     addAnnouncement,
-    subjects,
     setActiveTab,
     notify
   } = useApp();
 
-  const [activeSubTab, setActiveSubTab] = useState('payments'); // 'payments', 'students', 'teachers', 'schedules', 'classrooms', 'announcements'
-  const [paymentFilter, setPaymentFilter] = useState('all'); // 'all', 'pending', 'approved', 'rejected'
+  const [activeSubTab, setActiveSubTab] = useState('payments'); // 'payments', 'subjects', 'schedules', 'certificates', 'teachers', 'students', 'classrooms'
+  const [paymentFilter, setPaymentFilter] = useState('all');
+
+  // Preview modals
+  const [previewCert, setPreviewCert] = useState(null);
+  const [previewReportCardStudent, setPreviewReportCardStudent] = useState(null);
+
+  // Subject Form State
+  const [subjectModalOpen, setSubjectModalOpen] = useState(false);
+  const [editingSubId, setEditingSubId] = useState(null);
+  const [subjectForm, setSubjectForm] = useState({
+    name: '',
+    code: '',
+    gradeLevel: '4to Año',
+    teacherName: '',
+    color: '#2563eb'
+  });
+
+  // Schedule Block Form State (Supports Regular, Recess, Day Off)
+  const [schedModalOpen, setSchedModalOpen] = useState(false);
+  const [schedType, setSchedType] = useState('regular'); // 'regular', 'recess', 'day_off'
+  const [schedForm, setSchedForm] = useState({
+    day: 'Lunes',
+    time: '07:00 - 08:30 AM',
+    subject: subjects[0]?.name || '',
+    classroom: classrooms[0]?.name || '',
+    teacher: teachersList[0]?.name || '',
+    notes: ''
+  });
+
+  // Certificate Creation / Editing State
+  const [certModalOpen, setCertModalOpen] = useState(false);
+  const [editingCertId, setEditingCertId] = useState(null);
+  const [certForm, setCertForm] = useState({
+    studentId: students[0]?.id || '',
+    studentName: students[0]?.name || '',
+    studentIdNumber: students[0]?.studentIdNumber || '',
+    gradeLevel: students[0]?.gradeLevel || '4to Año',
+    category: 'recognition', // 'grade' or 'recognition'
+    template_type: 'academic', // 'academic', 'sports', 'anniversary', 'values'
+    title: 'Diploma de Honor al Rendimiento Académico',
+    scoreNote: '',
+    description: 'Otorgado en reconocimiento a su sobresaliente dedicación y méritos académicos.'
+  });
 
   // Teacher Form State
   const [teacherModalOpen, setTeacherModalOpen] = useState(false);
   const [editingTeacherId, setEditingTeacherId] = useState(null);
-  const [teacherFormData, setTeacherFormData] = useState({
+  const [teacherForm, setTeacherForm] = useState({
     name: '',
     email: '',
     phone: '',
     department: 'Ciencias Exactas',
-    subjects: ['Matemáticas']
-  });
-
-  // Schedule Form State
-  const [schedModalOpen, setSchedModalOpen] = useState(false);
-  const [editingSchedId, setEditingSchedId] = useState(null);
-  const [schedFormData, setSchedFormData] = useState({
-    day: 'Lunes',
-    time: '07:00 - 08:30 AM',
-    subject: subjects[0]?.name || 'Matemáticas',
-    classroom: classrooms[0]?.name || 'Aula 1 - Simón Bolívar (A-101)',
-    classroomCode: classrooms[0]?.code || 'A-101',
-    teacher: teachersList[0]?.name || 'Prof. Carlos Ramírez',
-    teacherId: teachersList[0]?.id || 'usr-teacher-1',
-  });
-
-  // Attendance quick action
-  const [absenceModalOpen, setAbsenceModalOpen] = useState(false);
-  const [absenceFormData, setAbsenceFormData] = useState({
-    studentId: students[0]?.id || '',
-    studentName: students[0]?.name || '',
-    subject: 'Dirección / Guardia',
-    date: new Date().toISOString().split('T')[0],
-    status: 'absent',
-    notes: 'Inasistencia general registrada por control de estudios.'
+    subjects: ''
   });
 
   // Classroom Form State
-  const [classroomFormData, setClassroomFormData] = useState({
+  const [classroomModalOpen, setClassroomModalOpen] = useState(false);
+  const [classroomForm, setClassroomForm] = useState({
     name: '',
     code: '',
     capacity: 35,
-    floor: 'Planta Baja',
-    description: ''
+    floor: 'Planta Baja'
   });
 
-  // Announcement Form State
-  const [annFormData, setAnnFormData] = useState({
-    title: '',
-    content: '',
-    priority: 'normal',
-    roleTarget: 'Todos'
-  });
-
-  // Verification note for payments
-  const [reviewNote, setReviewNote] = useState('');
-
-  // Handlers for Teachers
-  const handleOpenTeacherModal = (teach = null) => {
-    if (teach) {
-      setEditingTeacherId(teach.id);
-      setTeacherFormData({
-        name: teach.name,
-        email: teach.email,
-        phone: teach.phone,
-        department: teach.department,
-        subjects: teach.subjects || ['Matemáticas']
-      });
+  // Handlers for Subjects
+  const handleOpenSubjectModal = (sub = null) => {
+    if (sub) {
+      setEditingSubId(sub.id);
+      setSubjectForm({ ...sub });
     } else {
-      setEditingTeacherId(null);
-      setTeacherFormData({
+      setEditingSubId(null);
+      setSubjectForm({
         name: '',
-        email: '',
-        phone: '',
-        department: 'Ciencias Exactas',
-        subjects: ['Matemáticas']
+        code: '',
+        gradeLevel: '4to Año',
+        teacherName: teachersList[0]?.name || '',
+        color: '#2563eb'
       });
     }
-    setTeacherModalOpen(true);
+    setSubjectModalOpen(true);
   };
 
+  const handleSaveSubject = async (e) => {
+    e.preventDefault();
+    if (editingSubId) {
+      await updateSubject(editingSubId, subjectForm);
+    } else {
+      await addSubject(subjectForm);
+    }
+    setSubjectModalOpen(false);
+  };
+
+  // Handlers for Schedules
+  const handleSaveSchedule = async (e) => {
+    e.preventDefault();
+    let title = schedForm.subject;
+    let place = schedForm.classroom;
+
+    if (schedType === 'day_off') {
+      title = 'Día Libre Escolar';
+      place = 'Sin actividad';
+    } else if (schedType === 'recess') {
+      title = 'Receso Escolar';
+      place = 'Áreas comunes';
+    }
+
+    await addScheduleBlock({
+      day: schedForm.day,
+      time: schedForm.time,
+      subject: title,
+      classroom: place,
+      teacher: schedType === 'regular' ? schedForm.teacher : 'Dirección',
+      entry_type: schedType,
+      notes: schedForm.notes
+    });
+    setSchedModalOpen(false);
+  };
+
+  // Handlers for Certificates
+  const handleOpenCertModal = (cert = null) => {
+    if (cert) {
+      setEditingCertId(cert.id);
+      setCertForm({
+        studentId: cert.studentId || '',
+        studentName: cert.studentName || cert.student_name || '',
+        studentIdNumber: cert.studentIdNumber || cert.student_id_number || '',
+        gradeLevel: cert.gradeLevel || cert.grade_level || '4to Año',
+        category: cert.category || 'recognition',
+        template_type: cert.template_type || 'academic',
+        title: cert.title || 'Diploma Oficial',
+        scoreNote: cert.scoreNote || cert.score_note || '',
+        description: cert.description || ''
+      });
+    } else {
+      setEditingCertId(null);
+      setCertForm({
+        studentId: students[0]?.id || '',
+        studentName: students[0]?.name || '',
+        studentIdNumber: students[0]?.studentIdNumber || '',
+        gradeLevel: students[0]?.gradeLevel || '4to Año',
+        category: 'recognition',
+        template_type: 'academic',
+        title: 'Certificado de Excelencia Académica',
+        scoreNote: '19.5 pts',
+        description: 'En reconocimiento por su destacada dedicación y rendimiento escolar.'
+      });
+    }
+    setCertModalOpen(true);
+  };
+
+  const handleSaveCert = async (e) => {
+    e.preventDefault();
+    if (editingCertId) {
+      await updateCertificate(editingCertId, certForm);
+    } else {
+      await addCertificate(certForm);
+    }
+    setCertModalOpen(false);
+  };
+
+  // Handlers for Teachers
   const handleSaveTeacher = (e) => {
     e.preventDefault();
     if (editingTeacherId) {
-      updateTeacher(editingTeacherId, teacherFormData);
+      updateTeacher(editingTeacherId, teacherForm);
     } else {
-      addTeacher(teacherFormData);
+      addTeacher(teacherForm);
     }
     setTeacherModalOpen(false);
   };
 
-  // Handlers for Schedule
-  const handleOpenSchedModal = (sched = null) => {
-    if (sched) {
-      setEditingSchedId(sched.id);
-      setSchedFormData({ ...sched });
-    } else {
-      setEditingSchedId(null);
-      setSchedFormData({
-        day: 'Lunes',
-        time: '07:00 - 08:30 AM',
-        subject: subjects[0]?.name || 'Matemáticas',
-        classroom: classrooms[0]?.name || 'Aula 1 - Simón Bolívar (A-101)',
-        classroomCode: classrooms[0]?.code || 'A-101',
-        teacher: teachersList[0]?.name || 'Prof. Carlos Ramírez',
-        teacherId: teachersList[0]?.id || 'usr-teacher-1',
-      });
-    }
-    setSchedModalOpen(true);
-  };
-
-  const handleSaveSchedule = (e) => {
-    e.preventDefault();
-    if (editingSchedId) {
-      updateScheduleBlock(editingSchedId, schedFormData);
-    } else {
-      addScheduleBlock(schedFormData);
-    }
-    setSchedModalOpen(false);
-  };
-
-  // Handlers for Absence
-  const handleSaveAbsence = async (e) => {
-    e.preventDefault();
-    const st = students.find((s) => s.id === absenceFormData.studentId) || students[0];
-    await recordAttendance({
-      ...absenceFormData,
-      studentName: st.name,
-      statusLabel: absenceFormData.status === 'absent' ? 'Falta Injustificada' : 'Falta Justificada',
-      sentTo: st.email
-    });
-    setAbsenceModalOpen(false);
-  };
-
-  // Handlers for Classroom
+  // Handlers for Classrooms
   const handleSaveClassroom = (e) => {
     e.preventDefault();
-    addClassroom(classroomFormData);
-    setClassroomFormData({
-      name: '',
-      code: '',
-      capacity: 35,
-      floor: 'Planta Baja',
-      description: ''
-    });
+    addClassroom(classroomForm);
+    setClassroomModalOpen(false);
   };
 
-  // Handlers for Announcement
-  const handleSaveAnnouncement = async (e) => {
-    e.preventDefault();
-    await addAnnouncement(annFormData);
-    setAnnFormData({
-      title: '',
-      content: '',
-      priority: 'normal',
-      roleTarget: 'Todos'
-    });
-  };
-
-  // Filtered payments
   const filteredPayments =
     paymentFilter === 'all'
       ? payments
       : payments.filter((p) => p.status === paymentFilter);
 
-  const pendingPaymentsCount = payments.filter((p) => p.status === 'pending').length;
-
   return (
-    <div className="min-h-screen bg-slate-50 pb-20">
-      {/* Top Header */}
-      <div className="bg-slate-900 text-white pt-8 pb-14 px-4 sm:px-6 lg:px-8 border-b border-slate-800">
+    <div className="min-h-screen bg-slate-950 text-slate-100 pb-20">
+      {/* 1. Header Banner */}
+      <div className="bg-slate-900/80 border-b border-slate-800/80 pt-8 pb-14 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-2 text-xs text-slate-400 mb-4">
             <button onClick={() => setActiveTab('home')} className="hover:text-white transition">
               Inicio
             </button>
-            <ChevronRight className="w-3 h-3" />
-            <span className="text-white font-medium">Panel Administrativo Central</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+            <span className="text-white font-medium">Panel de Dirección y Control de Estudios</span>
           </div>
 
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 bg-slate-800/80 p-6 rounded-2xl border border-slate-700/70">
+          <div className="glass-surface p-6 sm:p-7 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="flex items-center gap-4">
-              <img
-                src={currentUser?.avatar || adminUser.avatar}
-                alt="Director"
-                className="w-16 h-16 rounded-xl object-cover border border-slate-600"
-              />
+              <div className="w-16 h-16 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300">
+                <ShieldCheck className="w-8 h-8 text-blue-400" />
+              </div>
               <div>
-                <span className="px-2.5 py-0.5 rounded-md bg-rose-500/20 text-rose-300 text-[11px] font-semibold border border-rose-400/20 inline-block mb-1">
-                  Administrador General ({institution.adminEmail})
+                <span className="px-2.5 py-0.5 rounded-md bg-blue-500/15 text-blue-300 text-[11px] font-semibold border border-blue-400/20 inline-block mb-1">
+                  Dirección General ({institution.adminEmail})
                 </span>
-                <h1 className="text-2xl font-bold font-heading text-white">
+                <h1 className="text-2xl sm:text-3xl font-bold font-heading text-white">
                   Larry González • Dirección General
                 </h1>
-                <p className="text-xs text-slate-300">
-                  {institution.name} • {institution.city}
+                <p className="text-xs text-slate-400">
+                  {institution.name} • Barcelona, Estado Anzoátegui
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2.5 text-center">
-              <div className="bg-slate-900/80 px-3.5 py-2.5 rounded-xl border border-slate-700">
-                <div className="text-lg font-bold text-white font-heading">{students.length}</div>
-                <div className="text-[10px] text-slate-400 uppercase">Alumnos</div>
+            <div className="grid grid-cols-4 gap-2.5 text-center w-full md:w-auto">
+              <div className="glass-surface-subtle px-3.5 py-2.5 rounded-xl text-center">
+                <div className="text-lg font-bold font-heading text-white">{subjects.length}</div>
+                <div className="text-[10px] text-slate-400 uppercase font-medium">Materias</div>
               </div>
-              <div className="bg-slate-900/80 px-3.5 py-2.5 rounded-xl border border-slate-700">
-                <div className="text-lg font-bold text-white font-heading">{teachersList.length}</div>
-                <div className="text-[10px] text-slate-400 uppercase">Docentes</div>
+              <div className="glass-surface-subtle px-3.5 py-2.5 rounded-xl text-center">
+                <div className="text-lg font-bold font-heading text-white">{teachersList.length}</div>
+                <div className="text-[10px] text-slate-400 uppercase font-medium">Docentes</div>
               </div>
-              <div className="bg-slate-900/80 px-3.5 py-2.5 rounded-xl border border-slate-700">
-                <div className="text-lg font-bold text-amber-400 font-heading">
-                  {pendingPaymentsCount}
+              <div className="glass-surface-subtle px-3.5 py-2.5 rounded-xl text-center">
+                <div className="text-lg font-bold font-heading text-amber-400">
+                  {payments.filter((p) => p.status === 'pending').length}
                 </div>
-                <div className="text-[10px] text-slate-400 uppercase">Por Revisar</div>
+                <div className="text-[10px] text-slate-400 uppercase font-medium">Pagos Pend.</div>
+              </div>
+              <div className="glass-surface-subtle px-3.5 py-2.5 rounded-xl text-center">
+                <div className="text-lg font-bold font-heading text-blue-400">{certificates.length}</div>
+                <div className="text-[10px] text-slate-400 uppercase font-medium">Diplomas</div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Subtabs Bar */}
+      {/* 2. Subtabs Navigation Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6">
-        <div className="bg-white rounded-xl shadow-xs border border-slate-200 p-1 flex gap-1 overflow-x-auto text-xs font-semibold">
+        <div className="glass-surface rounded-xl p-1 flex gap-1 overflow-x-auto text-xs font-semibold shadow-md">
           <button
             onClick={() => setActiveSubTab('payments')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
-              activeSubTab === 'payments' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
+              activeSubTab === 'payments' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
             <CreditCard className="w-4 h-4" />
-            <span>Revisión de Pagos ({pendingPaymentsCount} pendientes)</span>
+            <span>Auditoría de Pagos ({payments.length})</span>
           </button>
 
           <button
-            onClick={() => setActiveSubTab('students')}
+            onClick={() => setActiveSubTab('subjects')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
-              activeSubTab === 'students' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
+              activeSubTab === 'subjects' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
-            <GraduationCap className="w-4 h-4" />
-            <span>Control de Estudiantes ({students.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('teachers')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
-              activeSubTab === 'teachers' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span>Gestión de Profesores ({teachersList.length})</span>
+            <BookOpen className="w-4 h-4" />
+            <span>Gestión de Asignaturas ({subjects.length})</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('schedules')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
-              activeSubTab === 'schedules' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
+              activeSubTab === 'schedules' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
             <Calendar className="w-4 h-4" />
-            <span>Horarios y Aulas</span>
+            <span>Horarios, Recesos y Días Libres</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('certificates')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
+              activeSubTab === 'certificates' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Award className="w-4 h-4" />
+            <span>Emisión de Certificados ({certificates.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('teachers')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
+              activeSubTab === 'teachers' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>Nómina de Profesores ({teachersList.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveSubTab('students')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
+              activeSubTab === 'students' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <GraduationCap className="w-4 h-4" />
+            <span>Censo Estudiantil ({students.length})</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('classrooms')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
-              activeSubTab === 'classrooms' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
+              activeSubTab === 'classrooms' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
             <Building className="w-4 h-4" />
-            <span>Catálogo de Aulas ({classrooms.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('announcements')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
-              activeSubTab === 'announcements' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <Bell className="w-4 h-4" />
-            <span>Circulares Institucionales</span>
+            <span>Sistema de Aulas ({classrooms.length})</span>
           </button>
         </div>
       </div>
 
-      {/* Main Workspace */}
+      {/* 3. Main Workspace */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-        {/* TAB 1: PAYMENTS REVIEW */}
+        {/* TAB 1: AUDITORÍA DE PAGOS */}
         {activeSubTab === 'payments' && (
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-6">
+          <div className="glass-card p-6 rounded-2xl space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-base font-bold text-slate-900 font-heading">
+                <h2 className="text-base font-bold font-heading text-white">
                   Auditoría y Validación de Pagos
                 </h2>
-                <p className="text-xs text-slate-500">
-                  Concilia las transferencias y pagos móviles reportados por los representantes
+                <p className="text-xs text-slate-400">
+                  Concilia los pagos reportados por los representantes y actualiza su solvencia
                 </p>
               </div>
 
@@ -358,563 +393,531 @@ export default function AdminPortal() {
                     key={st}
                     onClick={() => setPaymentFilter(st)}
                     className={`px-3 py-1.5 rounded-lg font-medium transition capitalize ${
-                      paymentFilter === st
-                        ? 'bg-slate-900 text-white'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      paymentFilter === st ? 'bg-blue-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-white'
                     }`}
                   >
-                    {st === 'all'
-                      ? 'Todos'
-                      : st === 'pending'
-                      ? 'Pendientes'
-                      : st === 'approved'
-                      ? 'Aprobados'
-                      : 'Rechazados'}
+                    {st === 'all' ? 'Todos' : st === 'pending' ? 'Pendientes' : st === 'approved' ? 'Aprobados' : 'Rechazados'}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-200 text-slate-400 uppercase tracking-wider">
-                    <th className="py-3 px-3">Representante / Alumno</th>
-                    <th className="py-3 px-3">Concepto</th>
-                    <th className="py-3 px-3">Método y Referencia</th>
-                    <th className="py-3 px-3 text-right">Monto</th>
-                    <th className="py-3 px-3 text-center">Estado</th>
-                    <th className="py-3 px-3 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredPayments.map((p) => (
-                    <tr key={p.id} className="hover:bg-slate-50">
-                      <td className="py-3 px-3">
-                        <div className="font-bold text-slate-900">{p.representativeName}</div>
-                        <div className="text-[11px] text-slate-500">
-                          {p.studentName} ({p.studentGrade})
-                        </div>
-                      </td>
-                      <td className="py-3 px-3 font-medium text-slate-700">{p.paymentConcept}</td>
-                      <td className="py-3 px-3">
-                        <div className="text-slate-800">{p.paymentMethod}</div>
-                        <div className="text-[11px] font-mono text-slate-500">Ref: {p.referenceNumber}</div>
-                        {p.receiptUrl && (
-                          <a
-                            href={p.receiptUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-[10px] text-blue-600 hover:underline flex items-center gap-1 mt-0.5"
-                          >
-                            <span>Ver comprobante</span>
-                            <ExternalLink className="w-3 h-3" />
-                          </a>
-                        )}
-                      </td>
-                      <td className="py-3 px-3 text-right font-bold text-slate-900 font-heading">
-                        ${Number(p.amount).toFixed(2)}
-                      </td>
-                      <td className="py-3 px-3 text-center">
-                        <span
-                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                            p.status === 'approved'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : p.status === 'rejected'
-                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                              : 'bg-amber-50 text-amber-700 border border-amber-200'
-                          }`}
-                        >
-                          {p.status === 'approved'
-                            ? 'Aprobado'
-                            : p.status === 'rejected'
-                            ? 'Rechazado'
-                            : 'Pendiente'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-right space-x-1.5">
-                        {p.status !== 'approved' && (
-                          <button
-                            onClick={() => updatePaymentStatus(p.id, 'approved', 'Conciliado en banco por Dirección')}
-                            className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md text-xs font-medium"
-                            title="Aprobar pago"
-                          >
-                            <Check className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        {p.status !== 'rejected' && (
-                          <button
-                            onClick={() => updatePaymentStatus(p.id, 'rejected', 'Referencia no encontrada o monto incorrecto')}
-                            className="p-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-md text-xs font-medium"
-                            title="Rechazar pago"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </td>
+            {filteredPayments.length === 0 ? (
+              <div className="p-10 text-center text-xs text-slate-500 italic">
+                No hay pagos registrados bajo este filtro.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+                      <th className="py-2.5 px-3">Representante / Alumno</th>
+                      <th className="py-2.5 px-3">Concepto</th>
+                      <th className="py-2.5 px-3">Método & Referencia</th>
+                      <th className="py-2.5 px-3 text-right">Monto</th>
+                      <th className="py-2.5 px-3 text-center">Estado</th>
+                      <th className="py-2.5 px-3 text-right">Acciones</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/80">
+                    {filteredPayments.map((p) => (
+                      <tr key={p.id} className="hover:bg-slate-800/40">
+                        <td className="py-3 px-3">
+                          <div className="font-bold text-white">{p.representativeName}</div>
+                          <div className="text-[11px] text-slate-400">{p.studentName}</div>
+                        </td>
+                        <td className="py-3 px-3 text-slate-200">{p.paymentConcept}</td>
+                        <td className="py-3 px-3">
+                          <div className="text-slate-300">{p.paymentMethod}</div>
+                          <div className="text-[11px] font-mono text-slate-400">Ref: {p.referenceNumber}</div>
+                          {p.receiptUrl && (
+                            <a
+                              href={p.receiptUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[10px] text-blue-400 hover:underline flex items-center gap-1 mt-0.5"
+                            >
+                              <span>Ver comprobante</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          )}
+                        </td>
+                        <td className="py-3 px-3 text-right font-bold text-white font-mono">
+                          ${Number(p.amount).toFixed(2)}
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              p.status === 'approved'
+                                ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                                : p.status === 'rejected'
+                                ? 'bg-rose-950 text-rose-300 border border-rose-800'
+                                : 'bg-amber-950 text-amber-300 border border-amber-800'
+                            }`}
+                          >
+                            {p.status === 'approved' ? 'Aprobado' : p.status === 'rejected' ? 'Rechazado' : 'Pendiente'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-right space-x-1.5">
+                          {p.status !== 'approved' && (
+                            <button
+                              onClick={() => updatePaymentStatus(p.id, 'approved', 'Conciliado en cuenta por Dirección')}
+                              className="p-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded"
+                              title="Aprobar pago"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          {p.status !== 'rejected' && (
+                            <button
+                              onClick={() => updatePaymentStatus(p.id, 'rejected', 'Referencia bancaria no encontrada')}
+                              className="p-1.5 bg-rose-700 hover:bg-rose-600 text-white rounded"
+                              title="Rechazar pago"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
-        {/* TAB 2: STUDENTS CONTROL */}
-        {activeSubTab === 'students' && (
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-6">
+        {/* TAB 2: GESTIÓN DE ASIGNATURAS (Zero mock, full dynamic database) */}
+        {activeSubTab === 'subjects' && (
+          <div className="glass-card p-6 rounded-2xl space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-base font-bold text-slate-900 font-heading">
-                  Censo y Control Estudiantil
+                <h2 className="text-base font-bold font-heading text-white">
+                  Catálogo Oficial de Asignaturas
                 </h2>
-                <p className="text-xs text-slate-500">
-                  Listado de alumnos matriculados y registro de novedades académicas
+                <p className="text-xs text-slate-400">
+                  Agrega asignatura por asignatura a la base de datos de la institución
                 </p>
               </div>
 
               <button
-                onClick={() => setAbsenceModalOpen(true)}
-                className="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs rounded-lg transition flex items-center gap-1.5"
+                onClick={() => handleOpenSubjectModal()}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition shadow-xs"
               >
-                <Clock className="w-4 h-4" />
-                <span>Registrar Falta Institucional</span>
+                <Plus className="w-3.5 h-3.5" />
+                <span>Agregar Asignatura</span>
               </button>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-200 text-slate-400 uppercase tracking-wider">
-                    <th className="py-3 px-3">Estudiante</th>
-                    <th className="py-3 px-3">Cédula / Carnet</th>
-                    <th className="py-3 px-3">Grado y Sección</th>
-                    <th className="py-3 px-3">Representante</th>
-                    <th className="py-3 px-3 text-center">Promedio</th>
-                    <th className="py-3 px-3 text-center">Asistencia</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {students.map((st) => (
-                    <tr key={st.id} className="hover:bg-slate-50">
-                      <td className="py-3 px-3">
-                        <div className="font-bold text-slate-900">{st.name}</div>
-                        <div className="text-[11px] text-slate-400">{st.email}</div>
-                      </td>
-                      <td className="py-3 px-3 font-mono font-medium text-slate-700">
-                        {st.studentIdNumber}
-                      </td>
-                      <td className="py-3 px-3 text-slate-700 font-medium">{st.gradeLevel}</td>
-                      <td className="py-3 px-3 text-slate-600">{st.representativeName || 'Titular Asignado'}</td>
-                      <td className="py-3 px-3 text-center font-bold text-blue-700">
-                        {st.overallAverage} pts
-                      </td>
-                      <td className="py-3 px-3 text-center font-semibold text-emerald-700">
-                        {st.attendanceRate}%
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 3: TEACHERS MANAGEMENT */}
-        {activeSubTab === 'teachers' && (
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-base font-bold text-slate-900 font-heading">
-                  Nómina y Asignación de Profesores
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Crea y edita docentes, asigna departamentos y materias a impartir
-                </p>
+            {subjects.length === 0 ? (
+              <div className="p-12 text-center text-xs text-slate-500 italic">
+                No hay asignaturas en la base de datos. Haz clic en "Agregar Asignatura" para registrar la primera.
               </div>
-
-              <button
-                onClick={() => handleOpenTeacherModal()}
-                className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs rounded-lg transition flex items-center gap-1.5"
-              >
-                <PlusCircle className="w-4 h-4" />
-                <span>Agregar Nuevo Profesor</span>
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {teachersList.map((t) => (
-                <div
-                  key={t.id}
-                  className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 flex items-start justify-between gap-3 text-xs"
-                >
-                  <div className="flex items-start gap-3">
-                    <img
-                      src={t.avatar}
-                      alt={t.name}
-                      className="w-12 h-12 rounded-lg object-cover border border-slate-300"
-                    />
-                    <div>
-                      <div className="font-bold text-slate-900 text-sm">{t.name}</div>
-                      <div className="text-slate-500">{t.department}</div>
-                      <div className="text-blue-700 font-medium mt-1">
-                        Materias: {Array.isArray(t.subjects) ? t.subjects.join(', ') : t.subjects}
-                      </div>
-                      <div className="text-slate-400 text-[11px] mt-0.5">
-                        {t.email} • {t.phone}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => handleOpenTeacherModal(t)}
-                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
-                      title="Editar"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => deleteTeacher(t.id)}
-                      className="p-1.5 text-rose-600 hover:bg-rose-50 rounded"
-                      title="Eliminar"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+                      <th className="py-2.5 px-3">Código</th>
+                      <th className="py-2.5 px-3">Nombre de la Asignatura</th>
+                      <th className="py-2.5 px-3">Nivel / Año</th>
+                      <th className="py-2.5 px-3">Profesor Asignado</th>
+                      <th className="py-2.5 px-3 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/80">
+                    {subjects.map((sub) => (
+                      <tr key={sub.id} className="hover:bg-slate-800/40">
+                        <td className="py-3 px-3 font-mono text-blue-400 font-semibold">{sub.code || '—'}</td>
+                        <td className="py-3 px-3 font-bold text-white">{sub.name}</td>
+                        <td className="py-3 px-3 text-slate-300">{sub.gradeLevel || '4to Año'}</td>
+                        <td className="py-3 px-3 text-slate-400">{sub.teacherName || 'Por asignar'}</td>
+                        <td className="py-3 px-3 text-right space-x-1">
+                          <button
+                            onClick={() => handleOpenSubjectModal(sub)}
+                            className="p-1.5 text-blue-400 hover:bg-slate-800 rounded"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => deleteSubject(sub.id)}
+                            className="p-1.5 text-rose-400 hover:bg-slate-800 rounded"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
-        {/* TAB 4: SCHEDULES & CLASSROOM ASSIGNMENT */}
+        {/* TAB 3: HORARIOS, RECESOS Y DÍAS LIBRES */}
         {activeSubTab === 'schedules' && (
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-6">
+          <div className="glass-card p-6 rounded-2xl space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-base font-bold text-slate-900 font-heading">
-                  Programación de Horarios y Asignación de Aulas
+                <h2 className="text-base font-bold font-heading text-white">
+                  Programación de Horarios, Recesos y Días Libres
                 </h2>
-                <p className="text-xs text-slate-500">
-                  Modifica qué profesor imparte cada materia, en qué día y en qué aula específica
+                <p className="text-xs text-slate-400">
+                  Establece bloques de clases regulares, recesos o marca días libres institucionales
                 </p>
               </div>
 
               <button
-                onClick={() => handleOpenSchedModal()}
-                className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs rounded-lg transition flex items-center gap-1.5"
+                onClick={() => setSchedModalOpen(true)}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition shadow-xs"
               >
-                <PlusCircle className="w-4 h-4" />
-                <span>Añadir Bloque de Horario</span>
+                <Plus className="w-3.5 h-3.5" />
+                <span>Añadir Bloque al Horario</span>
               </button>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-200 text-slate-400 uppercase tracking-wider">
-                    <th className="py-3 px-3">Día</th>
-                    <th className="py-3 px-3">Horario</th>
-                    <th className="py-3 px-3">Materia</th>
-                    <th className="py-3 px-3">Docente Asignado</th>
-                    <th className="py-3 px-3">Aula Asignada</th>
-                    <th className="py-3 px-3 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {schedules.map((sc) => (
-                    <tr key={sc.id} className="hover:bg-slate-50">
-                      <td className="py-3 px-3 font-bold text-slate-900">{sc.day}</td>
-                      <td className="py-3 px-3 font-mono text-slate-600">{sc.time}</td>
-                      <td className="py-3 px-3 font-semibold text-blue-700">{sc.subject}</td>
-                      <td className="py-3 px-3 text-slate-800">{sc.teacher}</td>
-                      <td className="py-3 px-3">
-                        <span className="px-2 py-0.5 rounded-md bg-slate-100 font-medium text-slate-700">
-                          {sc.classroom}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-right space-x-1">
-                        <button
-                          onClick={() => handleOpenSchedModal(sc)}
-                          className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                          title="Editar"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => deleteScheduleBlock(sc.id)}
-                          className="p-1 text-rose-600 hover:bg-rose-50 rounded"
-                          title="Eliminar"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </td>
+            {schedules.length === 0 ? (
+              <div className="p-12 text-center text-xs text-slate-500 italic">
+                El horario está vacío. Agrega clases, recesos escolares o días libres.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+                      <th className="py-2.5 px-3">Día</th>
+                      <th className="py-2.5 px-3">Horario</th>
+                      <th className="py-2.5 px-3">Tipo de Entrada</th>
+                      <th className="py-2.5 px-3">Materia / Actividad</th>
+                      <th className="py-2.5 px-3">Aula Asignada</th>
+                      <th className="py-2.5 px-3">Docente</th>
+                      <th className="py-2.5 px-3 text-right">Acciones</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/80">
+                    {schedules.map((sc) => (
+                      <tr key={sc.id} className="hover:bg-slate-800/40">
+                        <td className="py-3 px-3 font-bold text-white">{sc.day || sc.day_of_week}</td>
+                        <td className="py-3 px-3 font-mono text-slate-300">{sc.time}</td>
+                        <td className="py-3 px-3">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                              sc.entry_type === 'day_off'
+                                ? 'bg-blue-950 text-blue-300 border border-blue-800'
+                                : sc.entry_type === 'recess'
+                                ? 'bg-amber-950 text-amber-300 border border-amber-800'
+                                : sc.entry_type === 'free_module'
+                                ? 'bg-slate-800 text-slate-300'
+                                : 'bg-slate-900 text-slate-200'
+                            }`}
+                          >
+                            {sc.entry_type === 'day_off'
+                              ? 'Día Libre'
+                              : sc.entry_type === 'recess'
+                              ? 'Receso'
+                              : sc.entry_type === 'free_module'
+                              ? 'Módulo Libre'
+                              : 'Clase Regular'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 font-medium text-white">{sc.subject}</td>
+                        <td className="py-3 px-3 text-slate-400">{sc.classroom}</td>
+                        <td className="py-3 px-3 text-slate-400">{sc.teacher}</td>
+                        <td className="py-3 px-3 text-right">
+                          <button
+                            onClick={() => deleteScheduleBlock(sc.id)}
+                            className="p-1.5 text-rose-400 hover:bg-slate-800 rounded"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
-        {/* TAB 5: CLASSROOMS CATALOG */}
-        {activeSubTab === 'classrooms' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-              <h2 className="text-base font-bold text-slate-900 font-heading mb-1">
-                Registrar Nueva Aula o Espacio
-              </h2>
-              <p className="text-xs text-slate-500 mb-5">
-                Añade aulas para su posterior asignación a los profesores
-              </p>
+        {/* TAB 4: CERTIFICADOS Y MODELOS AUTOMÁTICOS */}
+        {activeSubTab === 'certificates' && (
+          <div className="glass-card p-6 rounded-2xl space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-base font-bold font-heading text-white">
+                  Emisión y Edición de Certificados Oficiales
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Modelos de Excelencia Académica, Deportes, Aniversario y Valores con diseño oficial imprimible
+                </p>
+              </div>
 
-              <form onSubmit={handleSaveClassroom} className="space-y-4 text-xs">
-                <div>
-                  <label className="block font-medium text-slate-700 mb-1">Nombre del Aula</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ej. Aula 6 - Gran Mariscal de Ayacucho"
-                    value={classroomFormData.name}
-                    onChange={(e) => setClassroomFormData({ ...classroomFormData, name: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block font-medium text-slate-700 mb-1">Código del Aula</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Ej. A-106"
-                      value={classroomFormData.code}
-                      onChange={(e) => setClassroomFormData({ ...classroomFormData, code: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-medium text-slate-700 mb-1">Capacidad (Alumnos)</label>
-                    <input
-                      type="number"
-                      required
-                      value={classroomFormData.capacity}
-                      onChange={(e) => setClassroomFormData({ ...classroomFormData, capacity: Number(e.target.value) })}
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block font-medium text-slate-700 mb-1">Piso / Ubicación</label>
-                  <select
-                    value={classroomFormData.floor}
-                    onChange={(e) => setClassroomFormData({ ...classroomFormData, floor: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
-                  >
-                    <option value="Planta Baja">Planta Baja</option>
-                    <option value="Piso 1">Piso 1</option>
-                    <option value="Piso 2">Piso 2</option>
-                    <option value="Área Exterior / Canchas">Área Exterior / Canchas</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-medium text-slate-700 mb-1">Descripción / Dotación</label>
-                  <input
-                    type="text"
-                    placeholder="Ej. Climatizada, proyector interactivo"
-                    value={classroomFormData.description}
-                    onChange={(e) => setClassroomFormData({ ...classroomFormData, description: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-xs transition"
-                >
-                  Guardar Aula
-                </button>
-              </form>
+              <button
+                onClick={() => handleOpenCertModal()}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition shadow-xs"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Emitir Certificado a Alumno</span>
+              </button>
             </div>
 
-            <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-              <h3 className="font-bold text-slate-900 text-sm font-heading">
-                Aulas y Espacios Físicos Registrados ({classrooms.length})
-              </h3>
+            {certificates.length === 0 ? (
+              <div className="p-12 text-center text-xs text-slate-500 italic">
+                No hay certificados emitidos. El administrador puede asignarlos individualmente con modelos automáticos.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+                      <th className="py-2.5 px-3">Código</th>
+                      <th className="py-2.5 px-3">Estudiante</th>
+                      <th className="py-2.5 px-3">Título / Modelo</th>
+                      <th className="py-2.5 px-3">Categoría</th>
+                      <th className="py-2.5 px-3">Fecha</th>
+                      <th className="py-2.5 px-3 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/80">
+                    {certificates.map((c) => (
+                      <tr key={c.id} className="hover:bg-slate-800/40">
+                        <td className="py-3 px-3 font-mono text-slate-400 text-[11px]">{c.certificate_code || c.code}</td>
+                        <td className="py-3 px-3 font-bold text-white">{c.studentName || c.student_name}</td>
+                        <td className="py-3 px-3 text-slate-200">{c.title}</td>
+                        <td className="py-3 px-3">
+                          <span className="px-2 py-0.5 rounded text-[10px] bg-blue-950 text-blue-300 border border-blue-800">
+                            {c.category === 'grade' ? `Nota: ${c.scoreNote || c.score_note}` : 'Reconocimiento'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-slate-400">{c.issue_date || c.issueDate}</td>
+                        <td className="py-3 px-3 text-right space-x-1.5">
+                          <button
+                            onClick={() => setPreviewCert(c)}
+                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded text-[11px]"
+                          >
+                            Imprimir
+                          </button>
+                          <button
+                            onClick={() => handleOpenCertModal(c)}
+                            className="p-1 text-blue-400 hover:bg-slate-800 rounded"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => deleteCertificate(c.id)}
+                            className="p-1 text-rose-400 hover:bg-slate-800 rounded"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {classrooms.map((c) => (
-                  <div key={c.id} className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 text-xs">
-                    <div className="font-bold text-slate-900">{c.name}</div>
-                    <div className="text-[11px] text-blue-700 font-mono font-semibold mt-0.5">
-                      Código: {c.code}
+        {/* TAB 5: NÓMINA DE PROFESORES */}
+        {activeSubTab === 'teachers' && (
+          <div className="glass-card p-6 rounded-2xl space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-base font-bold font-heading text-white">Nómina Docente</h2>
+                <p className="text-xs text-slate-400">Registra y edita la plantilla de profesores</p>
+              </div>
+
+              <button
+                onClick={() => { setEditingTeacherId(null); setTeacherModalOpen(true); }}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition shadow-xs"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Agregar Profesor</span>
+              </button>
+            </div>
+
+            {teachersList.length === 0 ? (
+              <div className="p-12 text-center text-xs text-slate-500 italic">
+                No hay profesores agregados a la nómina escolar.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {teachersList.map((t) => (
+                  <div key={t.id} className="p-4 rounded-xl border border-slate-800 bg-slate-900/60 flex justify-between text-xs">
+                    <div>
+                      <div className="font-bold text-white text-sm">{t.name}</div>
+                      <div className="text-slate-400 mt-0.5">{t.department}</div>
+                      <div className="text-slate-500 text-[11px] mt-2">{t.email} • {t.phone}</div>
                     </div>
-                    <div className="text-[11px] text-slate-500 mt-1">
-                      {c.floor} • Capacidad: {c.capacity} alumnos
-                    </div>
-                    {c.description && (
-                      <div className="text-[10px] text-slate-400 mt-1 italic">{c.description}</div>
-                    )}
+                    <button onClick={() => deleteTeacher(t.id)} className="text-rose-400 hover:text-rose-300">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 ))}
               </div>
-            </div>
+            )}
           </div>
         )}
 
-        {/* TAB 6: ANNOUNCEMENTS */}
-        {activeSubTab === 'announcements' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            <div className="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-              <h2 className="text-base font-bold text-slate-900 font-heading mb-1">
-                Emitir Circular Oficial
-              </h2>
-              <p className="text-xs text-slate-500 mb-5">
-                Firma y difunde comunicados para toda la comunidad del Colegio Integral Venezuela
-              </p>
-
-              <form onSubmit={handleSaveAnnouncement} className="space-y-4 text-xs">
-                <div>
-                  <label className="block font-medium text-slate-700 mb-1">Título</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ej. Cronograma de Exámenes de Reparación"
-                    value={annFormData.title}
-                    onChange={(e) => setAnnFormData({ ...annFormData, title: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-medium text-slate-700 mb-1">Audiencia Destinataria</label>
-                  <select
-                    value={annFormData.roleTarget}
-                    onChange={(e) => setAnnFormData({ ...annFormData, roleTarget: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
-                  >
-                    <option value="Todos">Toda la Comunidad (Público)</option>
-                    <option value="Representantes">Solo Representantes</option>
-                    <option value="Docentes">Solo Cuerpo Docente</option>
-                    <option value="Estudiantes">Solo Estudiantes</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-medium text-slate-700 mb-1">Contenido</label>
-                  <textarea
-                    rows={4}
-                    required
-                    placeholder="Texto de la circular institucional..."
-                    value={annFormData.content}
-                    onChange={(e) => setAnnFormData({ ...annFormData, content: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200"
-                  ></textarea>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-lg shadow-xs transition"
-                >
-                  Difundir Circular
-                </button>
-              </form>
+        {/* TAB 6: CENSO ESTUDIANTIL */}
+        {activeSubTab === 'students' && (
+          <div className="glass-card p-6 rounded-2xl space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold font-heading text-white">Censo Estudiantil Registrado</h2>
+                <p className="text-xs text-slate-400">Alumnos inscritos en la plataforma</p>
+              </div>
             </div>
 
-            <div className="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-3">
-              <h3 className="font-bold text-slate-900 text-sm font-heading">
-                Circulares Vigentes ({announcements.length})
-              </h3>
-              {announcements.map((a) => (
-                <div key={a.id} className="p-4 rounded-xl border border-slate-100 bg-slate-50 text-xs">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-bold text-slate-900 text-sm">{a.title}</span>
-                    <span className="text-[10px] text-slate-400">{a.date}</span>
+            {students.length === 0 ? (
+              <div className="p-12 text-center text-xs text-slate-500 italic">
+                No hay estudiantes registrados en la base de datos actualmente.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+                      <th className="py-2.5 px-3">Estudiante</th>
+                      <th className="py-2.5 px-3">Cédula</th>
+                      <th className="py-2.5 px-3">Año / Grado</th>
+                      <th className="py-2.5 px-3 text-right">Boletín Oficial</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/80">
+                    {students.map((st) => (
+                      <tr key={st.id} className="hover:bg-slate-800/40">
+                        <td className="py-3 px-3 font-bold text-white">{st.name}</td>
+                        <td className="py-3 px-3 font-mono text-slate-400">{st.studentIdNumber || '—'}</td>
+                        <td className="py-3 px-3 text-slate-300">{st.gradeLevel || '4to Año'}</td>
+                        <td className="py-3 px-3 text-right">
+                          <button
+                            onClick={() => setPreviewReportCardStudent(st)}
+                            className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[11px]"
+                          >
+                            Ver / Imprimir Boletín
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 7: AULAS */}
+        {activeSubTab === 'classrooms' && (
+          <div className="glass-card p-6 rounded-2xl space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold font-heading text-white">Sistema de Aulas y Espacios</h2>
+                <p className="text-xs text-slate-400">Espacios físicos de la sede en Barcelona</p>
+              </div>
+
+              <button
+                onClick={() => setClassroomModalOpen(true)}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition shadow-xs"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Agregar Aula</span>
+              </button>
+            </div>
+
+            {classrooms.length === 0 ? (
+              <div className="p-12 text-center text-xs text-slate-500 italic">
+                No hay aulas registradas en el sistema.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {classrooms.map((c) => (
+                  <div key={c.id} className="p-4 rounded-xl border border-slate-800 bg-slate-900/60 text-xs">
+                    <div className="font-bold text-white text-sm">{c.name}</div>
+                    <div className="text-blue-400 font-mono mt-0.5">{c.code}</div>
+                    <div className="text-slate-400 mt-2">{c.floor} • Capacidad: {c.capacity} alumnos</div>
                   </div>
-                  <p className="text-slate-600 leading-relaxed">{a.content}</p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* Teacher Modal */}
-      {teacherModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md p-6">
-            <h3 className="text-base font-bold text-slate-900 font-heading mb-4">
-              {editingTeacherId ? 'Editar Profesor' : 'Agregar Nuevo Profesor'}
+      {/* Subject Modal */}
+      {subjectModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+          <div className="glass-surface border border-slate-700 rounded-2xl w-full max-w-md p-6">
+            <h3 className="text-base font-bold font-heading text-white mb-4">
+              {editingSubId ? 'Editar Asignatura' : 'Agregar Asignatura a la Base de Datos'}
             </h3>
-            <form onSubmit={handleSaveTeacher} className="space-y-3.5 text-xs">
+            <form onSubmit={handleSaveSubject} className="space-y-3.5 text-xs">
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Nombre y Apellido</label>
+                <label className="block text-slate-400 mb-1">Nombre de la Materia</label>
                 <input
                   type="text"
                   required
-                  placeholder="Prof. Juan Pérez"
-                  value={teacherFormData.name}
-                  onChange={(e) => setTeacherFormData({ ...teacherFormData, name: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200"
-                />
-              </div>
-
-              <div>
-                <label className="block font-medium text-slate-700 mb-1">Correo Electrónico</label>
-                <input
-                  type="email"
-                  required
-                  placeholder="juan.perez@integralvenezuela.edu.ve"
-                  value={teacherFormData.email}
-                  onChange={(e) => setTeacherFormData({ ...teacherFormData, email: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200"
+                  placeholder="Ej. Matemáticas"
+                  value={subjectForm.name}
+                  onChange={(e) => setSubjectForm({ ...subjectForm, name: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-medium text-slate-700 mb-1">Teléfono</label>
+                  <label className="block text-slate-400 mb-1">Código</label>
                   <input
                     type="text"
-                    placeholder="+58 414 1234567"
-                    value={teacherFormData.phone}
-                    onChange={(e) => setTeacherFormData({ ...teacherFormData, phone: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200"
+                    placeholder="MAT-401"
+                    value={subjectForm.code}
+                    onChange={(e) => setSubjectForm({ ...subjectForm, code: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
                   />
                 </div>
                 <div>
-                  <label className="block font-medium text-slate-700 mb-1">Departamento</label>
+                  <label className="block text-slate-400 mb-1">Año / Nivel</label>
                   <select
-                    value={teacherFormData.department}
-                    onChange={(e) => setTeacherFormData({ ...teacherFormData, department: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
+                    value={subjectForm.gradeLevel}
+                    onChange={(e) => setSubjectForm({ ...subjectForm, gradeLevel: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
                   >
-                    <option value="Ciencias Exactas">Ciencias Exactas</option>
-                    <option value="Ciencias Naturales">Ciencias Naturales</option>
-                    <option value="Humanidades y Lengua">Humanidades y Lengua</option>
-                    <option value="Idiomas Modernos">Idiomas Modernos</option>
-                    <option value="Educación Física">Educación Física</option>
+                    <option value="1er Año">1er Año</option>
+                    <option value="2do Año">2do Año</option>
+                    <option value="3er Año">3er Año</option>
+                    <option value="4to Año">4to Año</option>
+                    <option value="5to Año">5to Año</option>
                   </select>
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3">
+              <div>
+                <label className="block text-slate-400 mb-1">Profesor Asignado</label>
+                <input
+                  type="text"
+                  placeholder="Ej. Prof. Carlos Ramírez"
+                  value={subjectForm.teacherName}
+                  onChange={(e) => setSubjectForm({ ...subjectForm, teacherName: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setTeacherModalOpen(false)}
-                  className="px-3 py-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+                  onClick={() => setSubjectModalOpen(false)}
+                  className="px-3 py-1.5 text-slate-400 hover:text-white"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg"
                 >
-                  Guardar
+                  Guardar Asignatura
                 </button>
               </div>
             </form>
@@ -922,21 +925,53 @@ export default function AdminPortal() {
         </div>
       )}
 
-      {/* Schedule Modal */}
+      {/* Schedule Modal (Classes, Recess, Day Off) */}
       {schedModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md p-6">
-            <h3 className="text-base font-bold text-slate-900 font-heading mb-4">
-              {editingSchedId ? 'Editar Bloque de Horario' : 'Añadir Bloque de Horario'}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+          <div className="glass-surface border border-slate-700 rounded-2xl w-full max-w-md p-6">
+            <h3 className="text-base font-bold font-heading text-white mb-3">
+              Añadir Entrada al Horario
             </h3>
+
+            {/* Selector de Tipo */}
+            <div className="grid grid-cols-3 gap-1.5 p-1 rounded-lg bg-slate-900 border border-slate-800 text-xs mb-4">
+              <button
+                type="button"
+                onClick={() => setSchedType('regular')}
+                className={`py-1.5 rounded-md font-medium transition ${
+                  schedType === 'regular' ? 'bg-blue-600 text-white' : 'text-slate-400'
+                }`}
+              >
+                Clase Regular
+              </button>
+              <button
+                type="button"
+                onClick={() => setSchedType('recess')}
+                className={`py-1.5 rounded-md font-medium transition ${
+                  schedType === 'recess' ? 'bg-amber-600 text-white' : 'text-slate-400'
+                }`}
+              >
+                Receso
+              </button>
+              <button
+                type="button"
+                onClick={() => setSchedType('day_off')}
+                className={`py-1.5 rounded-md font-medium transition ${
+                  schedType === 'day_off' ? 'bg-blue-700 text-white' : 'text-slate-400'
+                }`}
+              >
+                Día Libre
+              </button>
+            </div>
+
             <form onSubmit={handleSaveSchedule} className="space-y-3.5 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-medium text-slate-700 mb-1">Día de la Semana</label>
+                  <label className="block text-slate-400 mb-1">Día</label>
                   <select
-                    value={schedFormData.day}
-                    onChange={(e) => setSchedFormData({ ...schedFormData, day: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
+                    value={schedForm.day}
+                    onChange={(e) => setSchedForm({ ...schedForm, day: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
                   >
                     <option value="Lunes">Lunes</option>
                     <option value="Martes">Martes</option>
@@ -946,90 +981,80 @@ export default function AdminPortal() {
                   </select>
                 </div>
                 <div>
-                  <label className="block font-medium text-slate-700 mb-1">Horario</label>
+                  <label className="block text-slate-400 mb-1">Horario</label>
                   <input
                     type="text"
                     required
                     placeholder="07:00 - 08:30 AM"
-                    value={schedFormData.time}
-                    onChange={(e) => setSchedFormData({ ...schedFormData, time: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200"
+                    value={schedForm.time}
+                    onChange={(e) => setSchedForm({ ...schedForm, time: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block font-medium text-slate-700 mb-1">Materia</label>
-                <select
-                  value={schedFormData.subject}
-                  onChange={(e) => setSchedFormData({ ...schedFormData, subject: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
-                >
-                  {subjects.map((s) => (
-                    <option key={s.id} value={s.name}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {schedType === 'regular' && (
+                <>
+                  <div>
+                    <label className="block text-slate-400 mb-1">Materia</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ej. Física"
+                      value={schedForm.subject}
+                      onChange={(e) => setSchedForm({ ...schedForm, subject: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 mb-1">Aula Asignada</label>
+                    <input
+                      type="text"
+                      placeholder="Aula 1 - Simón Bolívar (A-101)"
+                      value={schedForm.classroom}
+                      onChange={(e) => setSchedForm({ ...schedForm, classroom: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-400 mb-1">Profesor Asignado</label>
+                    <input
+                      type="text"
+                      placeholder="Prof. Carlos Ramírez"
+                      value={schedForm.teacher}
+                      onChange={(e) => setSchedForm({ ...schedForm, teacher: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                    />
+                  </div>
+                </>
+              )}
 
-              <div>
-                <label className="block font-medium text-slate-700 mb-1">Docente Asignado</label>
-                <select
-                  value={schedFormData.teacher}
-                  onChange={(e) => {
-                    const t = teachersList.find((tc) => tc.name === e.target.value);
-                    setSchedFormData({
-                      ...schedFormData,
-                      teacher: e.target.value,
-                      teacherId: t?.id || 'usr-teacher-1'
-                    });
-                  }}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
-                >
-                  {teachersList.map((t) => (
-                    <option key={t.id} value={t.name}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {schedType === 'day_off' && (
+                <div>
+                  <label className="block text-slate-400 mb-1">Motivo del Día Libre</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. Feriado Regional o Consejo Pedagógico"
+                    value={schedForm.notes}
+                    onChange={(e) => setSchedForm({ ...schedForm, notes: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                  />
+                </div>
+              )}
 
-              <div>
-                <label className="block font-medium text-slate-700 mb-1">Aula Física Asignada</label>
-                <select
-                  value={schedFormData.classroom}
-                  onChange={(e) => {
-                    const cl = classrooms.find((c) => c.name === e.target.value);
-                    setSchedFormData({
-                      ...schedFormData,
-                      classroom: e.target.value,
-                      classroomCode: cl?.code || 'A-101'
-                    });
-                  }}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
-                >
-                  {classrooms.map((c) => (
-                    <option key={c.id} value={c.name}>
-                      {c.name} ({c.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-3">
+              <div className="flex items-center justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setSchedModalOpen(false)}
-                  className="px-3 py-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+                  className="px-3 py-1.5 text-slate-400 hover:text-white"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg"
                 >
-                  Guardar Horario
+                  Guardar en Horario
                 </button>
               </div>
             </form>
@@ -1037,89 +1062,300 @@ export default function AdminPortal() {
         </div>
       )}
 
-      {/* Quick Absence Modal */}
-      {absenceModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md p-6">
-            <h3 className="text-base font-bold text-slate-900 font-heading mb-4">
-              Registrar Inasistencia Oficial
+      {/* Certificate Creation & Editing Modal (Templates & Note vs Recognition) */}
+      {certModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in overflow-y-auto">
+          <div className="glass-surface border border-slate-700 rounded-2xl w-full max-w-lg p-6 my-6">
+            <h3 className="text-base font-bold font-heading text-white mb-4">
+              {editingCertId ? 'Editar Certificado Oficial' : 'Emitir Certificado Automático'}
             </h3>
-            <form onSubmit={handleSaveAbsence} className="space-y-3.5 text-xs">
+
+            <form onSubmit={handleSaveCert} className="space-y-3.5 text-xs">
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Alumno</label>
-                <select
-                  value={absenceFormData.studentId}
-                  onChange={(e) => {
-                    const st = students.find((s) => s.id === e.target.value);
-                    setAbsenceFormData({
-                      ...absenceFormData,
-                      studentId: e.target.value,
-                      studentName: st?.name || ''
-                    });
-                  }}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
-                >
-                  {students.map((st) => (
-                    <option key={st.id} value={st.id}>
-                      {st.name} ({st.studentIdNumber})
-                    </option>
-                  ))}
-                </select>
+                <label className="block text-slate-400 mb-1">Nombre del Estudiante</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. Valeria Sofía Morales"
+                  value={certForm.studentName}
+                  onChange={(e) => setCertForm({ ...certForm, studentName: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-medium text-slate-700 mb-1">Fecha</label>
+                  <label className="block text-slate-400 mb-1">Cédula de Identidad</label>
                   <input
-                    type="date"
-                    required
-                    value={absenceFormData.date}
-                    onChange={(e) => setAbsenceFormData({ ...absenceFormData, date: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200"
+                    type="text"
+                    placeholder="V-31.452.981"
+                    value={certForm.studentIdNumber}
+                    onChange={(e) => setCertForm({ ...certForm, studentIdNumber: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
                   />
                 </div>
                 <div>
-                  <label className="block font-medium text-slate-700 mb-1">Condición</label>
+                  <label className="block text-slate-400 mb-1">Año / Grado</label>
+                  <input
+                    type="text"
+                    placeholder="4to Año de Bachillerato"
+                    value={certForm.gradeLevel}
+                    onChange={(e) => setCertForm({ ...certForm, gradeLevel: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                  />
+                </div>
+              </div>
+
+              {/* Template / Model selector */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-400 mb-1">Modelo de Certificado</label>
                   <select
-                    value={absenceFormData.status}
-                    onChange={(e) => setAbsenceFormData({ ...absenceFormData, status: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
+                    value={certForm.template_type}
+                    onChange={(e) => {
+                      const t = e.target.value;
+                      let tit = 'Certificado de Excelencia Académica';
+                      let desc = 'En reconocimiento por su destacado rendimiento académico.';
+                      if (t === 'sports') {
+                        tit = 'Reconocimiento al Mérito Deportivo';
+                        desc = 'Por su destacada participación en torneos y disciplina atlética.';
+                      } else if (t === 'anniversary') {
+                        tit = 'Mención de Aniversario: 35 Años Enseñando a Vivir';
+                        desc = 'Por su compromiso y participación en las jornadas conmemorativas del colegio.';
+                      } else if (t === 'values') {
+                        tit = 'Mención al Civismo, Convivencia y Valores';
+                        desc = 'Por su conducta ejemplar, respeto a los símbolos patrios y solidaridad.';
+                      }
+                      setCertForm({
+                        ...certForm,
+                        template_type: t,
+                        title: tit,
+                        description: desc
+                      });
+                    }}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
                   >
-                    <option value="absent">Falta Injustificada</option>
-                    <option value="justified">Falta Justificada</option>
-                    <option value="late">Tardanza</option>
+                    <option value="academic">Excelencia Académica</option>
+                    <option value="sports">Eventos Deportivos</option>
+                    <option value="anniversary">Aniversario Institucional</option>
+                    <option value="values">Valores y Convivencia</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 mb-1">Tipo de Certificado</label>
+                  <select
+                    value={certForm.category}
+                    onChange={(e) => setCertForm({ ...certForm, category: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                  >
+                    <option value="recognition">Reconocimiento (Honor)</option>
+                    <option value="grade">Tipo Nota (Con Promedio)</option>
                   </select>
                 </div>
               </div>
 
+              {certForm.category === 'grade' && (
+                <div>
+                  <label className="block text-slate-400 mb-1">Calificación / Promedio a Destacar</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. 19.8 / 20 pts"
+                    value={certForm.scoreNote}
+                    onChange={(e) => setCertForm({ ...certForm, scoreNote: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white font-bold"
+                  />
+                </div>
+              )}
+
               <div>
-                <label className="block font-medium text-slate-700 mb-1">Observaciones</label>
+                <label className="block text-slate-400 mb-1">Título del Diploma</label>
+                <input
+                  type="text"
+                  required
+                  value={certForm.title}
+                  onChange={(e) => setCertForm({ ...certForm, title: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 mb-1">Texto Conmemorativo</label>
                 <textarea
-                  rows={2}
-                  value={absenceFormData.notes}
-                  onChange={(e) => setAbsenceFormData({ ...absenceFormData, notes: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200"
+                  rows={3}
+                  required
+                  value={certForm.description}
+                  onChange={(e) => setCertForm({ ...certForm, description: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
                 ></textarea>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3">
+              <div className="flex items-center justify-end gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setAbsenceModalOpen(false)}
-                  className="px-3 py-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+                  onClick={() => setCertModalOpen(false)}
+                  className="px-3 py-1.5 text-slate-400 hover:text-white"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-medium rounded-lg"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg"
                 >
-                  Registrar y Notificar
+                  {editingCertId ? 'Actualizar Certificado' : 'Emitir Certificado'}
                 </button>
               </div>
             </form>
           </div>
         </div>
+      )}
+
+      {/* Teacher Modal */}
+      {teacherModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+          <div className="glass-surface border border-slate-700 rounded-2xl w-full max-w-md p-6">
+            <h3 className="text-base font-bold font-heading text-white mb-4">Agregar Profesor</h3>
+            <form onSubmit={handleSaveTeacher} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block text-slate-400 mb-1">Nombre Completo</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Prof. Carlos Ramírez"
+                  value={teacherForm.name}
+                  onChange={(e) => setTeacherForm({ ...teacherForm, name: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 mb-1">Correo Electrónico</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="profesor@integralvenezuela.edu.ve"
+                  value={teacherForm.email}
+                  onChange={(e) => setTeacherForm({ ...teacherForm, email: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-400 mb-1">Teléfono</label>
+                  <input
+                    type="text"
+                    placeholder="+58 412 1234567"
+                    value={teacherForm.phone}
+                    onChange={(e) => setTeacherForm({ ...teacherForm, phone: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">Departamento</label>
+                  <input
+                    type="text"
+                    placeholder="Ciencias Exactas"
+                    value={teacherForm.department}
+                    onChange={(e) => setTeacherForm({ ...teacherForm, department: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setTeacherModalOpen(false)}
+                  className="px-3 py-1.5 text-slate-400 hover:text-white"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg"
+                >
+                  Guardar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Classroom Modal */}
+      {classroomModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+          <div className="glass-surface border border-slate-700 rounded-2xl w-full max-w-md p-6">
+            <h3 className="text-base font-bold font-heading text-white mb-4">Agregar Aula</h3>
+            <form onSubmit={handleSaveClassroom} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block text-slate-400 mb-1">Nombre del Aula</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Aula 1 - Simón Bolívar"
+                  value={classroomForm.name}
+                  onChange={(e) => setClassroomForm({ ...classroomForm, name: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-400 mb-1">Código</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="A-101"
+                    value={classroomForm.code}
+                    onChange={(e) => setClassroomForm({ ...classroomForm, code: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-400 mb-1">Capacidad</label>
+                  <input
+                    type="number"
+                    required
+                    value={classroomForm.capacity}
+                    onChange={(e) => setClassroomForm({ ...classroomForm, capacity: Number(e.target.value) })}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setClassroomModalOpen(false)}
+                  className="px-3 py-1.5 text-slate-400 hover:text-white"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg"
+                >
+                  Guardar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Official Certificate Preview Modal */}
+      <CertificateModal certificate={previewCert} onClose={() => setPreviewCert(null)} />
+
+      {/* Official Report Card Preview Modal */}
+      {previewReportCardStudent && (
+        <ReportCardModal
+          student={previewReportCardStudent}
+          grades={grades}
+          subjects={subjects}
+          onClose={() => setPreviewReportCardStudent(null)}
+        />
       )}
     </div>
   );
