@@ -3,7 +3,11 @@ import { supabase } from '../lib/supabase';
 import {
   initialInstitution,
   initialStudents,
+  initialRepresentative,
   initialTeacher,
+  initialTeachersList,
+  initialAdmin,
+  initialClassrooms,
   initialSubjects,
   initialGrades,
   initialEvaluationPlans,
@@ -11,17 +15,16 @@ import {
   initialAttendances,
   initialCertificates,
   initialMemories,
+  initialPayments,
   initialAnnouncements,
 } from '../data/mockData';
 
 const AppContext = createContext();
 
 export function AppProvider({ children }) {
-  // Current user state:
-  // user = { id, email, fullName, role: 'student' | 'teacher' | 'admin', gradeLevel, avatar }
-  // default demo user: student Valeria Morales
+  // Current user state
   const [currentUser, setCurrentUser] = useState(() => {
-    const saved = localStorage.getItem('liceo_current_user');
+    const saved = localStorage.getItem('iv_current_user');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -29,63 +32,80 @@ export function AppProvider({ children }) {
         return null;
       }
     }
-    return null; // Public landing page by default
+    return null; // Public website by default
   });
 
-  const [activeTab, setActiveTab] = useState('home'); // 'home', 'student-portal', 'teacher-portal', 'auth'
+  const [activeTab, setActiveTab] = useState('home'); // 'home', 'student-portal', 'teacher-portal', 'representative-portal', 'admin-portal'
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [targetAuthRole, setTargetAuthRole] = useState('student'); // 'student' or 'teacher'
+  const [targetAuthRole, setTargetAuthRole] = useState('student'); // 'student', 'teacher', 'representative', 'admin'
 
   // Application Data States (persisted to localStorage & synced with Supabase)
   const [institution, setInstitution] = useState(initialInstitution);
-  
+
+  const [classrooms, setClassrooms] = useState(() => {
+    const saved = localStorage.getItem('iv_classrooms');
+    return saved ? JSON.parse(saved) : initialClassrooms;
+  });
+
   const [students, setStudents] = useState(() => {
-    const saved = localStorage.getItem('liceo_students');
+    const saved = localStorage.getItem('iv_students');
     return saved ? JSON.parse(saved) : initialStudents;
   });
 
+  const [representative] = useState(initialRepresentative);
+
+  const [teachersList, setTeachersList] = useState(() => {
+    const saved = localStorage.getItem('iv_teachers_list');
+    return saved ? JSON.parse(saved) : initialTeachersList;
+  });
+
   const [teacher] = useState(initialTeacher);
+  const [adminUser] = useState(initialAdmin);
   const [subjects] = useState(initialSubjects);
 
   const [grades, setGrades] = useState(() => {
-    const saved = localStorage.getItem('liceo_grades');
+    const saved = localStorage.getItem('iv_grades');
     return saved ? JSON.parse(saved) : initialGrades;
   });
 
   const [evaluationPlans, setEvaluationPlans] = useState(() => {
-    const saved = localStorage.getItem('liceo_eval_plans');
+    const saved = localStorage.getItem('iv_eval_plans');
     return saved ? JSON.parse(saved) : initialEvaluationPlans;
   });
 
   const [schedules, setSchedules] = useState(() => {
-    const saved = localStorage.getItem('liceo_schedules');
+    const saved = localStorage.getItem('iv_schedules');
     return saved ? JSON.parse(saved) : initialSchedules;
   });
 
   const [attendances, setAttendances] = useState(() => {
-    const saved = localStorage.getItem('liceo_attendances');
+    const saved = localStorage.getItem('iv_attendances');
     return saved ? JSON.parse(saved) : initialAttendances;
   });
 
   const [certificates, setCertificates] = useState(() => {
-    const saved = localStorage.getItem('liceo_certificates');
+    const saved = localStorage.getItem('iv_certificates');
     return saved ? JSON.parse(saved) : initialCertificates;
   });
 
   const [memories, setMemories] = useState(() => {
-    const saved = localStorage.getItem('liceo_memories');
+    const saved = localStorage.getItem('iv_memories');
     return saved ? JSON.parse(saved) : initialMemories;
   });
 
+  const [payments, setPayments] = useState(() => {
+    const saved = localStorage.getItem('iv_payments');
+    return saved ? JSON.parse(saved) : initialPayments;
+  });
+
   const [announcements, setAnnouncements] = useState(() => {
-    const saved = localStorage.getItem('liceo_announcements');
+    const saved = localStorage.getItem('iv_announcements');
     return saved ? JSON.parse(saved) : initialAnnouncements;
   });
 
   const [supabaseConnected, setSupabaseConnected] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
 
-  // Show quick toast notification
   const notify = (msg, type = 'success') => {
     setToastMessage({ msg, type, id: Date.now() });
     setTimeout(() => {
@@ -95,42 +115,58 @@ export function AppProvider({ children }) {
 
   // Sync to localStorage
   useEffect(() => {
-    localStorage.setItem('liceo_grades', JSON.stringify(grades));
+    localStorage.setItem('iv_grades', JSON.stringify(grades));
   }, [grades]);
 
   useEffect(() => {
-    localStorage.setItem('liceo_eval_plans', JSON.stringify(evaluationPlans));
+    localStorage.setItem('iv_eval_plans', JSON.stringify(evaluationPlans));
   }, [evaluationPlans]);
 
   useEffect(() => {
-    localStorage.setItem('liceo_schedules', JSON.stringify(schedules));
+    localStorage.setItem('iv_schedules', JSON.stringify(schedules));
   }, [schedules]);
 
   useEffect(() => {
-    localStorage.setItem('liceo_attendances', JSON.stringify(attendances));
+    localStorage.setItem('iv_attendances', JSON.stringify(attendances));
   }, [attendances]);
 
   useEffect(() => {
-    localStorage.setItem('liceo_certificates', JSON.stringify(certificates));
+    localStorage.setItem('iv_certificates', JSON.stringify(certificates));
   }, [certificates]);
 
   useEffect(() => {
-    localStorage.setItem('liceo_memories', JSON.stringify(memories));
+    localStorage.setItem('iv_memories', JSON.stringify(memories));
   }, [memories]);
 
   useEffect(() => {
-    localStorage.setItem('liceo_announcements', JSON.stringify(announcements));
+    localStorage.setItem('iv_payments', JSON.stringify(payments));
+  }, [payments]);
+
+  useEffect(() => {
+    localStorage.setItem('iv_classrooms', JSON.stringify(classrooms));
+  }, [classrooms]);
+
+  useEffect(() => {
+    localStorage.setItem('iv_teachers_list', JSON.stringify(teachersList));
+  }, [teachersList]);
+
+  useEffect(() => {
+    localStorage.setItem('iv_students', JSON.stringify(students));
+  }, [students]);
+
+  useEffect(() => {
+    localStorage.setItem('iv_announcements', JSON.stringify(announcements));
   }, [announcements]);
 
   useEffect(() => {
     if (currentUser) {
-      localStorage.setItem('liceo_current_user', JSON.stringify(currentUser));
+      localStorage.setItem('iv_current_user', JSON.stringify(currentUser));
     } else {
-      localStorage.removeItem('liceo_current_user');
+      localStorage.removeItem('iv_current_user');
     }
   }, [currentUser]);
 
-  // Check Supabase connection and listen to Auth state changes
+  // Check Supabase and handle real authentication session
   useEffect(() => {
     async function checkSupabase() {
       try {
@@ -139,17 +175,16 @@ export function AppProvider({ children }) {
           setSupabaseConnected(true);
         }
       } catch (err) {
-        // Fallback gracefully
         setSupabaseConnected(false);
       }
     }
     checkSupabase();
 
-    // Listen to real Supabase session
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         const user = session.user;
-        // Fetch profile
+        const isAdminEmail = user.email?.toLowerCase() === 'quinterostudent@gmail.com';
+
         try {
           const { data: profile } = await supabase
             .from('profiles')
@@ -157,38 +192,39 @@ export function AppProvider({ children }) {
             .eq('id', user.id)
             .single();
 
-          if (profile) {
-            setCurrentUser({
-              id: profile.id,
-              email: profile.email || user.email,
-              name: profile.full_name || user.email?.split('@')[0],
-              role: profile.role || 'student',
-              gradeLevel: profile.grade_level || '4to Año - Sección A',
-              avatar: profile.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
-              isSupabaseUser: true,
-            });
+          const resolvedRole = isAdminEmail ? 'admin' : (profile?.role || user.user_metadata?.role || 'student');
+
+          const userObj = {
+            id: user.id,
+            email: user.email,
+            name: isAdminEmail ? 'Larry González (Director)' : (profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0]),
+            role: resolvedRole,
+            gradeLevel: profile?.grade_level || user.user_metadata?.grade_level || '4to Año - Sección A',
+            avatar: profile?.avatar_url || user.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+            isSupabaseUser: true,
+          };
+          setCurrentUser(userObj);
+
+          if (isAdminEmail) {
+            setActiveTab('admin-portal');
+          } else if (resolvedRole === 'teacher') {
+            setActiveTab('teacher-portal');
+          } else if (resolvedRole === 'representative') {
+            setActiveTab('representative-portal');
           } else {
-            // Use metadata
-            setCurrentUser({
-              id: user.id,
-              email: user.email,
-              name: user.user_metadata?.full_name || user.email?.split('@')[0],
-              role: user.user_metadata?.role || 'student',
-              gradeLevel: user.user_metadata?.grade_level || '4to Año - Sección A',
-              avatar: user.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
-              isSupabaseUser: true,
-            });
+            setActiveTab('student-portal');
           }
         } catch (e) {
+          const resolvedRole = isAdminEmail ? 'admin' : (user.user_metadata?.role || 'student');
           setCurrentUser({
             id: user.id,
             email: user.email,
-            name: user.user_metadata?.full_name || user.email?.split('@')[0],
-            role: user.user_metadata?.role || 'student',
-            gradeLevel: user.user_metadata?.grade_level || '4to Año - Sección A',
+            name: isAdminEmail ? 'Larry González (Director)' : (user.user_metadata?.full_name || user.email?.split('@')[0]),
+            role: resolvedRole,
             avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
             isSupabaseUser: true,
           });
+          if (isAdminEmail) setActiveTab('admin-portal');
         }
       }
     });
@@ -198,8 +234,8 @@ export function AppProvider({ children }) {
     };
   }, []);
 
-  // Quick Demo Login switches
-  const loginAsDemoStudent = (studentId = 'usr-student-1') => {
+  // Quick Account switchers (direct access to roles for testing)
+  const loginAsStudent = (studentId = 'usr-student-1') => {
     const st = students.find((s) => s.id === studentId) || students[0];
     const userObj = {
       id: st.id,
@@ -209,28 +245,61 @@ export function AppProvider({ children }) {
       studentIdNumber: st.studentIdNumber,
       gradeLevel: st.gradeLevel,
       avatar: st.avatar,
-      isDemo: true,
     };
     setCurrentUser(userObj);
     setActiveTab('student-portal');
     setAuthModalOpen(false);
-    notify(`Sesión iniciada como estudiante: ${st.name}`);
+    notify(`Sesión activa: ${st.name}`);
   };
 
-  const loginAsDemoTeacher = () => {
+  const loginAsTeacher = (teacherId = 'usr-teacher-1') => {
+    const t = teachersList.find((tc) => tc.id === teacherId) || teacher;
     const userObj = {
-      id: teacher.id,
-      email: teacher.email,
-      name: teacher.name,
+      id: t.id,
+      email: t.email,
+      name: t.name,
       role: 'teacher',
-      department: teacher.department,
-      avatar: teacher.avatar,
-      isDemo: true,
+      department: t.department,
+      avatar: t.avatar,
+      subjects: t.subjects,
     };
     setCurrentUser(userObj);
     setActiveTab('teacher-portal');
     setAuthModalOpen(false);
-    notify(`Sesión iniciada como docente: ${teacher.name}`);
+    notify(`Sesión activa: ${t.name}`);
+  };
+
+  const loginAsRepresentative = () => {
+    const userObj = {
+      id: representative.id,
+      email: representative.email,
+      name: representative.name,
+      role: 'representative',
+      phone: representative.phone,
+      idNumber: representative.idNumber,
+      avatar: representative.avatar,
+      wards: representative.wards
+    };
+    setCurrentUser(userObj);
+    setActiveTab('representative-portal');
+    setAuthModalOpen(false);
+    notify(`Sesión activa: ${representative.name} (Representante)`);
+  };
+
+  const loginAsAdmin = () => {
+    const userObj = {
+      id: adminUser.id,
+      email: adminUser.email,
+      name: adminUser.name,
+      role: 'admin',
+      title: adminUser.title,
+      avatar: adminUser.avatar,
+      phone: adminUser.phone
+    };
+    setCurrentUser(userObj);
+    setActiveTab('admin-portal');
+    setAuthModalOpen(false);
+    notify(`Acceso Administrativo Concedido: ${adminUser.name}`);
   };
 
   const logout = async () => {
@@ -239,7 +308,7 @@ export function AppProvider({ children }) {
     }
     setCurrentUser(null);
     setActiveTab('home');
-    notify('Sesión cerrada con éxito');
+    notify('Has cerrado sesión correctamente');
   };
 
   // Grade operations
@@ -258,7 +327,6 @@ export function AppProvider({ children }) {
       setGrades((prev) => [newGrade, ...prev]);
     }
 
-    // Try Supabase sync
     try {
       if (supabaseConnected) {
         await supabase.from('grades').upsert({
@@ -276,7 +344,7 @@ export function AppProvider({ children }) {
       // offline fallback
     }
 
-    notify(isUpdate ? 'Calificación actualizada correctamente' : 'Nueva calificación registrada');
+    notify(isUpdate ? 'Calificación actualizada con éxito' : 'Calificación cargada al sistema');
     return newGrade;
   };
 
@@ -306,10 +374,10 @@ export function AppProvider({ children }) {
         });
       }
     } catch (e) {
-      // silent
+      // fallback
     }
 
-    notify('Plan de evaluación publicado con éxito');
+    notify('Plan de evaluación publicado en el portal');
   };
 
   const deleteEvaluationPlan = (id) => {
@@ -317,7 +385,7 @@ export function AppProvider({ children }) {
     notify('Plan de evaluación eliminado');
   };
 
-  // Attendance operations (notifying absences)
+  // Attendance operations
   const recordAttendance = async (attData) => {
     const newAtt = {
       id: `att-${Date.now()}`,
@@ -327,7 +395,21 @@ export function AppProvider({ children }) {
     };
     setAttendances((prev) => [newAtt, ...prev]);
 
-    notify(`Asistencia registrada. Se envió notificación al representante.`);
+    try {
+      if (supabaseConnected) {
+        await supabase.from('attendances').insert({
+          student_id: newAtt.studentId,
+          date: newAtt.date,
+          status: newAtt.status,
+          justification: newAtt.notes,
+          notified: true,
+        });
+      }
+    } catch (e) {
+      // fallback
+    }
+
+    notify(`Inasistencia registrada. Notificación transmitida al representante.`);
   };
 
   // Certificate operations
@@ -335,41 +417,185 @@ export function AppProvider({ children }) {
     const newCert = {
       id: `cert-${Date.now()}`,
       issueDate: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }),
-      code: `CERT-${Math.random().toString(36).substring(2, 8).toUpperCase()}-2024`,
-      signer: 'Dra. Carmen Teresa Mendoza, Directora General',
+      code: `CERT-IV-${Math.random().toString(36).substring(2, 7).toUpperCase()}-2024`,
+      signer: 'Larry González, Director General',
       ...certData,
     };
     setCertificates((prev) => [newCert, ...prev]);
-    notify('Certificado / Mención otorgada satisfactoriamente');
+    notify('Certificado oficial generado exitosamente');
     return newCert;
   };
 
   // Schedule operations
   const addScheduleBlock = (schedData) => {
-    setSchedules((prev) => [...prev, schedData]);
-    notify('Bloque de horario añadido al cronograma');
+    const newBlock = {
+      id: `sch-${Date.now()}`,
+      ...schedData
+    };
+    setSchedules((prev) => [...prev, newBlock]);
+    notify('Horario de clase actualizado');
   };
 
-  // Memories operations
-  const addMemory = (memoryData) => {
+  const updateScheduleBlock = (id, updatedData) => {
+    setSchedules((prev) => prev.map((s) => (s.id === id ? { ...s, ...updatedData } : s)));
+    notify('Horario modificado');
+  };
+
+  const deleteScheduleBlock = (id) => {
+    setSchedules((prev) => prev.filter((s) => s.id !== id));
+    notify('Bloque de horario retirado');
+  };
+
+  // Classroom operations
+  const addClassroom = (classroomData) => {
+    const newClassroom = {
+      id: `clr-${Date.now()}`,
+      ...classroomData
+    };
+    setClassrooms((prev) => [...prev, newClassroom]);
+    notify(`Aula ${newClassroom.name} registrada`);
+  };
+
+  // Memories operations (by students or faculty)
+  const addMemory = async (memoryData) => {
     const newMem = {
       id: `mem-${Date.now()}`,
       date: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }),
+      authorName: memoryData.authorName || currentUser?.name || 'Comunidad Escolar',
+      gradeYear: memoryData.gradeYear || currentUser?.gradeLevel?.split('-')[0]?.trim() || '4to Año',
       ...memoryData,
     };
     setMemories((prev) => [newMem, ...prev]);
-    notify('Recuerdo / Foto añadida a la galería institucional');
+
+    try {
+      if (supabaseConnected) {
+        await supabase.from('memories').insert({
+          title: newMem.title,
+          description: newMem.description,
+          image_url: newMem.image,
+          category: newMem.category,
+          author_name: newMem.authorName,
+          grade_year: newMem.gradeYear
+        });
+      }
+    } catch (e) {
+      // fallback
+    }
+
+    notify('Recuerdo agregado al anuario de tu año escolar');
+  };
+
+  // Payments operations (Representatives and Admin)
+  const addPayment = async (paymentData) => {
+    const newPayment = {
+      id: `pay-${Date.now()}`,
+      representativeId: currentUser?.id || representative.id,
+      representativeName: currentUser?.name || representative.name,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      adminNotes: 'En revisión por administración',
+      ...paymentData,
+    };
+    setPayments((prev) => [newPayment, ...prev]);
+
+    try {
+      if (supabaseConnected) {
+        await supabase.from('payments').insert({
+          representative_id: newPayment.representativeId,
+          representative_name: newPayment.representativeName,
+          student_id: newPayment.studentId,
+          student_name: newPayment.studentName,
+          student_grade: newPayment.studentGrade,
+          amount: newPayment.amount,
+          currency: newPayment.currency || 'USD',
+          payment_method: newPayment.paymentMethod,
+          reference_number: newPayment.referenceNumber,
+          payment_concept: newPayment.paymentConcept,
+          receipt_url: newPayment.receiptUrl,
+          payment_date: newPayment.paymentDate,
+          status: 'pending',
+        });
+      }
+    } catch (e) {
+      // fallback
+    }
+
+    notify('Comprobante de pago enviado para validación administrativa');
+    return newPayment;
+  };
+
+  const updatePaymentStatus = async (paymentId, newStatus, notes = '') => {
+    setPayments((prev) =>
+      prev.map((p) =>
+        p.id === paymentId
+          ? { ...p, status: newStatus, adminNotes: notes || (newStatus === 'approved' ? 'Pago conciliado y aprobado' : 'Pago rechazado') }
+          : p
+      )
+    );
+
+    try {
+      if (supabaseConnected) {
+        await supabase
+          .from('payments')
+          .update({
+            status: newStatus,
+            admin_notes: notes,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', paymentId);
+      }
+    } catch (e) {
+      // fallback
+    }
+
+    notify(newStatus === 'approved' ? 'Pago aprobado satisfactoriamente' : 'Estado de pago actualizado');
+  };
+
+  // Teachers management (Admin)
+  const addTeacher = (teacherData) => {
+    const newT = {
+      id: `usr-teacher-${Date.now()}`,
+      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80',
+      ...teacherData,
+    };
+    setTeachersList((prev) => [...prev, newT]);
+    notify(`Docente ${newT.name} registrado en la nómina`);
+  };
+
+  const updateTeacher = (id, updatedData) => {
+    setTeachersList((prev) => prev.map((t) => (t.id === id ? { ...t, ...updatedData } : t)));
+    notify('Datos del docente actualizados');
+  };
+
+  const deleteTeacher = (id) => {
+    setTeachersList((prev) => prev.filter((t) => t.id !== id));
+    notify('Docente retirado del sistema');
   };
 
   // Announcements
-  const addAnnouncement = (annData) => {
+  const addAnnouncement = async (annData) => {
     const newAnn = {
       id: `ann-${Date.now()}`,
-      date: 'Reciente',
+      date: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }),
       ...annData,
     };
     setAnnouncements((prev) => [newAnn, ...prev]);
-    notify('Comunicado oficial publicado');
+
+    try {
+      if (supabaseConnected) {
+        await supabase.from('announcements').insert({
+          title: newAnn.title,
+          content: newAnn.content,
+          priority: newAnn.priority,
+          target_role: newAnn.roleTarget === 'Todos' ? 'all' : newAnn.roleTarget.toLowerCase(),
+          author_name: 'Dirección del Plantel'
+        });
+      }
+    } catch (e) {
+      // fallback
+    }
+
+    notify('Comunicado oficial difundido en la plataforma');
   };
 
   return (
@@ -386,7 +612,16 @@ export function AppProvider({ children }) {
         institution,
         setInstitution,
         students,
+        setStudents,
+        representative,
         teacher,
+        teachersList,
+        addTeacher,
+        updateTeacher,
+        deleteTeacher,
+        adminUser,
+        classrooms,
+        addClassroom,
         subjects,
         grades,
         addOrUpdateGrade,
@@ -396,16 +631,23 @@ export function AppProvider({ children }) {
         deleteEvaluationPlan,
         schedules,
         addScheduleBlock,
+        updateScheduleBlock,
+        deleteScheduleBlock,
         attendances,
         recordAttendance,
         certificates,
         issueCertificate,
         memories,
         addMemory,
+        payments,
+        addPayment,
+        updatePaymentStatus,
         announcements,
         addAnnouncement,
-        loginAsDemoStudent,
-        loginAsDemoTeacher,
+        loginAsStudent,
+        loginAsTeacher,
+        loginAsRepresentative,
+        loginAsAdmin,
         logout,
         supabaseConnected,
         toastMessage,

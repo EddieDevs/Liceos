@@ -1,101 +1,116 @@
 export const initialInstitution = {
-  name: 'Liceo Bicentenario',
+  name: 'U.E. Colegio Integral Venezuela',
+  shortName: 'Integral Venezuela',
   subtitle: 'Institución Educativa de Educación Media General',
-  motto: 'Educación con excelencia, ciencia y valores para transformar el porvenir',
-  phone: '+58 (212) 555-0199 / +58 (414) 302-8871',
-  email: 'contacto@liceobicentenario.edu.ve',
-  admissionsEmail: 'inscripciones@liceobicentenario.edu.ve',
-  address: 'Av. Las Acacias con Calle Los Ilustres, Edif. Sede Bicentenario, Caracas',
-  schedule: 'Lunes a Viernes: 7:00 AM - 4:30 PM',
-  principal: 'Dra. Carmen Teresa Mendoza',
-  academicDirector: 'Prof. Marcos Aurelio Peña',
-  foundedYear: '1988',
+  motto: 'Enseñando a vivir',
+  phone: '+58 (281) 286-4192 / +58 (414) 820-1122',
+  email: 'contacto@integralvenezuela.edu.ve',
+  admissionsEmail: 'admisiones@integralvenezuela.edu.ve',
+  adminEmail: 'quinterostudent@gmail.com',
+  address: 'Calle 11, sector Colinas del Neverí, Barcelona, Anzoátegui',
+  city: 'Barcelona, Anzoátegui',
+  schedule: 'Lunes a Viernes: 7:00 AM - 1:40 PM / Actividades extracurriculares hasta 4:30 PM',
+  principal: 'Larry González',
+  foundedDate: '10 de noviembre de 1989',
+  foundedYear: '1989',
   stats: [
-    { label: 'Años de Trayectoria', value: '36+' },
-    { label: 'Estudiantes Activos', value: '1,250' },
-    { label: 'Docentes Especialistas', value: '64' },
-    { label: 'Promociones Egresadas', value: '35' },
-    { label: 'Tasa de Ingreso Universitario', value: '98%' },
+    { label: 'Años de Trayectoria', value: '35+' },
+    { label: 'Estudiantes Formados', value: '1,400' },
+    { label: 'Docentes Especialistas', value: '48' },
+    { label: 'Promociones Egresadas', value: '34' },
+    { label: 'Ingreso Universitario', value: '99%' },
   ],
-  mission: 'Formar de manera integral a jóvenes bachilleres con alto rigor académico, pensamiento crítico, sólidas bases éticas, sensibilidad social y competencias tecnológicas, preparándolos como agentes de cambio constructivo para el desarrollo del país y el mundo.',
-  vision: 'Consolidarnos como la institución de educación media general referente nacional e internacional por su vanguardia pedagógica, cultura de innovación científica, excelencia humanística y formación de líderes comprometidos con el progreso sostenible.',
+  mission: 'Formar integralmente a niños y jóvenes con excelencia académica, criterio reflexivo, sólidos valores éticos, civismo y competencias humanas, bajo el principio fundamental de enseñar a vivir con rectitud y compromiso.',
+  vision: 'Ser la institución educativa modelo en el estado Anzoátegui y el oriente del país, reconocida por su exigencia pedagógica, vocación transformadora e innovación formativa para la vida y la educación universitaria.',
   values: [
-    { title: 'Excelencia y Rigor', desc: 'Búsqueda constante del conocimiento y la superación personal y académica.' },
-    { title: 'Ética y Responsabilidad', desc: 'Actuación honesta, puntual y coherente con el bienestar de la comunidad.' },
-    { title: 'Innovación Científica', desc: 'Fomento a la curiosidad, experimentación, robótica e investigación aplicada.' },
-    { title: 'Identidad y Cultura', desc: 'Aprecio por nuestras raíces históricas, el arte y el civismo ciudadano.' },
+    { title: 'Enseñar a Vivir', desc: 'Aprender no solo para la academia, sino para la convivencia, la ética y la plenitud personal.' },
+    { title: 'Rigor y Excelencia', desc: 'Dedicación constante al perfeccionamiento del conocimiento científico y humanístico.' },
+    { title: 'Sentido de Comunidad', desc: 'Alianza inquebrantable entre escuela, familia y entorno social barcelonés.' },
+    { title: 'Liderazgo y Civismo', desc: 'Compromiso activo con el desarrollo productivo, cultural y social de Venezuela.' },
   ],
   admissions: {
     period: 'Año Escolar 2024 - 2025',
     status: 'Inscripciones y Prosecución Abiertas',
     steps: [
-      { step: '01', title: 'Registro y Pre-inscripción', desc: 'Completar el formulario digital o en secretaría con datos del estudiante y representante.' },
-      { step: '02', title: 'Consignación de Recaudos', desc: 'Presentar carpetas con notas certificadas, partida de nacimiento y cédulas en control de estudios.' },
-      { step: '03', title: 'Entrevista Pedagógica', desc: 'Jornada de orientación vocacional y conocimiento familiar con el departamento de psicología.' },
-      { step: '04', title: 'Formalización de Matrícula', desc: 'Asignación de sección, carnetización estudiantil y entrega del cronograma escolar.' },
+      { step: '01', title: 'Registro y Pre-inscripción', desc: 'Completar el formulario digital o presencial con los datos del alumno y representante legal.' },
+      { step: '02', title: 'Consignación de Recaudos', desc: 'Entrega de notas certificadas, partida de nacimiento, cédulas y constancias en Control de Estudios.' },
+      { step: '03', title: 'Entrevista Pedagógica', desc: 'Jornada de orientación vocacional y conocimiento familiar con el Departamento de Orientación.' },
+      { step: '04', title: 'Formalización y Matrícula', desc: 'Asignación de sección, entrega de carnet y cronograma del año escolar.' },
     ],
     requirements: [
       'Original y copia de la Partida de Nacimiento del estudiante.',
-      'Copia ampliada de la Cédula de Identidad del estudiante y de ambos representantes.',
-      'Calificaciones Certificadas del año anterior expedidas por el Ministerio de Educación.',
+      'Copia ampliada de la Cédula de Identidad del alumno y de ambos representantes.',
+      'Calificaciones Certificadas del grado anterior expedidas por el Ministerio de Educación.',
       'Carta de buena conducta de la institución de procedencia.',
-      'Constancia de vacunas y certificado de salud integral vigente.',
+      'Constancia de vacunas y certificado de salud integral emitido por médico certificado.',
       'Cuatro (4) fotos tipo carnet recientes con fondo blanco.',
     ]
   },
   gallery: [
     {
       id: 'g1',
-      title: 'Laboratorio de Ciencias Experimentales',
-      category: 'Instalaciones',
+      title: 'Laboratorio de Ciencias Experimentales "Humboldt"',
+      category: 'Laboratorios',
       image: 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=800&auto=format&fit=crop&q=80',
-      description: 'Equipado con microscopios ópticos, material reactivo y sensores para química, física y biología.'
+      description: 'Equipamiento de microscopía y reactivos para prácticas de química, biología y física.'
     },
     {
       id: 'g2',
-      title: 'Biblioteca y Sala de Investigación Digital',
-      category: 'Academia',
-      image: 'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=800&auto=format&fit=crop&q=80',
-      description: 'Más de 10.000 títulos bibliográficos y terminales de consulta con internet de alta velocidad.'
+      title: 'Aulas Climatizadas de Bachillerato',
+      category: 'Aulas',
+      image: 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=800&auto=format&fit=crop&q=80',
+      description: 'Espacios cómodos, luminosos y con proyectores interactivos para clases dinámicas.'
     },
     {
       id: 'g3',
-      title: 'Complejo Deportivo y Gimnasio Techado',
+      title: 'Canchas Deportivas Múltiples',
       category: 'Deportes',
       image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&auto=format&fit=crop&q=80',
-      description: 'Canchas multifuncionales para baloncesto, voleibol, futsal y pista de atletismo.'
+      description: 'Instalaciones para baloncesto, voleibol, fútbol sala y preparación física escolar.'
     },
     {
       id: 'g4',
-      title: 'Aulas Climatizadas e Interactivas',
-      category: 'Aulas',
-      image: 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=800&auto=format&fit=crop&q=80',
-      description: 'Espacios modernos de aprendizaje equipados con pantallas inteligentes y acústica adecuada.'
+      title: 'Biblioteca y Centro de Consulta',
+      category: 'Academia',
+      image: 'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=800&auto=format&fit=crop&q=80',
+      description: 'Colección de textos pedagógicos y módulos digitales de investigación guiada.'
     },
     {
       id: 'g5',
-      title: 'Auditorio Mayor "Andrés Bello"',
-      category: 'Cultura',
-      image: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&auto=format&fit=crop&q=80',
-      description: 'Capacidad para 500 personas, sede de conferencias, actos solemnes y festivales artísticos.'
+      title: 'Sala de Informática y Computación',
+      category: 'Tecnología',
+      image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800&auto=format&fit=crop&q=80',
+      description: 'Estaciones de trabajo individuales con conectividad y herramientas educativas modernas.'
     },
     {
       id: 'g6',
-      title: 'Centro de Robótica y Computación',
-      category: 'Tecnología',
-      image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800&auto=format&fit=crop&q=80',
-      description: 'Plataformas Arduino, kits de electrónica y estaciones de trabajo para programación.'
+      title: 'Auditorio Institucional',
+      category: 'Cultura',
+      image: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&auto=format&fit=crop&q=80',
+      description: 'Escenario de conferencias, asambleas de padres y actos solemnes de graduación.'
     }
   ]
 };
+
+export const initialClassrooms = [
+  { id: 'clr-1', name: 'Aula 1 - Simón Bolívar', code: 'A-101', capacity: 35, floor: 'Planta Baja', description: 'Aula multimedia climatizada' },
+  { id: 'clr-2', name: 'Aula 2 - Andrés Bello', code: 'A-102', capacity: 35, floor: 'Planta Baja', description: 'Aula estándar de 4to Año' },
+  { id: 'clr-3', name: 'Aula 3 - Francisco de Miranda', code: 'A-103', capacity: 35, floor: 'Piso 1', description: 'Aula de 5to Año' },
+  { id: 'clr-4', name: 'Aula 4 - Rafael Urdaneta', code: 'A-104', capacity: 32, floor: 'Piso 1', description: 'Aula de ciencias' },
+  { id: 'clr-5', name: 'Laboratorio de Ciencias Experimentales', code: 'LAB-01', capacity: 30, floor: 'Planta Baja', description: 'Prácticas de Química y Física' },
+  { id: 'clr-6', name: 'Sala de Informática y Robótica', code: 'LAB-INF', capacity: 28, floor: 'Piso 1', description: 'Computación y tecnología' },
+  { id: 'clr-7', name: 'Cancha Deportiva Principal', code: 'DEP-01', capacity: 60, floor: 'Exterior', description: 'Educación Física y deportes' },
+];
 
 export const initialStudents = [
   {
     id: 'usr-student-1',
     name: 'Valeria Sofía Morales Mendoza',
-    email: 'valeria.morales@liceobicentenario.edu.ve',
+    email: 'valeria.morales@integralvenezuela.edu.ve',
     studentIdNumber: 'V-31.452.981',
     gradeLevel: '4to Año - Sección A',
+    representativeId: 'rep-1',
+    representativeName: 'Carlos Morales',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
     overallAverage: 19.3,
     attendanceRate: 98,
@@ -104,9 +119,11 @@ export const initialStudents = [
   {
     id: 'usr-student-2',
     name: 'Alejandro José Gómez Rangel',
-    email: 'alejandro.gomez@liceobicentenario.edu.ve',
+    email: 'alejandro.gomez@integralvenezuela.edu.ve',
     studentIdNumber: 'V-31.884.103',
     gradeLevel: '4to Año - Sección A',
+    representativeId: 'rep-2',
+    representativeName: 'Mariana Rangel',
     avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&auto=format&fit=crop&q=80',
     overallAverage: 17.8,
     attendanceRate: 95,
@@ -115,9 +132,11 @@ export const initialStudents = [
   {
     id: 'usr-student-3',
     name: 'Sofía Isabella Herrera Peña',
-    email: 'sofia.herrera@liceobicentenario.edu.ve',
+    email: 'sofia.herrera@integralvenezuela.edu.ve',
     studentIdNumber: 'V-32.001.455',
     gradeLevel: '4to Año - Sección A',
+    representativeId: 'rep-3',
+    representativeName: 'Ricardo Herrera',
     avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&auto=format&fit=crop&q=80',
     overallAverage: 18.5,
     attendanceRate: 100,
@@ -126,9 +145,11 @@ export const initialStudents = [
   {
     id: 'usr-student-4',
     name: 'Andrés Daniel Castillo Rojas',
-    email: 'andres.castillo@liceobicentenario.edu.ve',
+    email: 'andres.castillo@integralvenezuela.edu.ve',
     studentIdNumber: 'V-31.950.210',
     gradeLevel: '4to Año - Sección A',
+    representativeId: 'rep-4',
+    representativeName: 'Patricia Rojas',
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
     overallAverage: 16.2,
     attendanceRate: 91,
@@ -137,9 +158,11 @@ export const initialStudents = [
   {
     id: 'usr-student-5',
     name: 'Mariana Victoria Rivas Blanco',
-    email: 'mariana.rivas@liceobicentenario.edu.ve',
+    email: 'mariana.rivas@integralvenezuela.edu.ve',
     studentIdNumber: 'V-32.112.789',
     gradeLevel: '4to Año - Sección A',
+    representativeId: 'rep-5',
+    representativeName: 'Enrique Rivas',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80',
     overallAverage: 19.0,
     attendanceRate: 97,
@@ -147,27 +170,96 @@ export const initialStudents = [
   }
 ];
 
+export const initialRepresentative = {
+  id: 'rep-1',
+  name: 'Carlos Alberto Morales Solórzano',
+  email: 'carlos.morales@gmail.com',
+  phone: '+58 (414) 819-4433',
+  idNumber: 'V-14.892.411',
+  role: 'representative',
+  address: 'Urb. Las Garzas, Sector Neverí, Barcelona',
+  avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&auto=format&fit=crop&q=80',
+  wards: [
+    {
+      id: 'usr-student-1',
+      name: 'Valeria Sofía Morales Mendoza',
+      gradeLevel: '4to Año - Sección A',
+      overallAverage: 19.3,
+      relationship: 'Hija'
+    }
+  ]
+};
+
 export const initialTeacher = {
   id: 'usr-teacher-1',
   name: 'Prof. Carlos Eduardo Ramírez',
-  email: 'carlos.ramirez@liceobicentenario.edu.ve',
+  email: 'carlos.ramirez@integralvenezuela.edu.ve',
   role: 'teacher',
   department: 'Ciencias Exactas e Ingenierías',
   subjects: ['Matemáticas', 'Física'],
-  assignedGrade: '4to Año - Sección A y B',
+  assignedGrade: '4to Año - Sección A',
   avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80',
   phone: '+58 (412) 887-2301'
 };
 
+export const initialTeachersList = [
+  {
+    id: 'usr-teacher-1',
+    name: 'Prof. Carlos Eduardo Ramírez',
+    email: 'carlos.ramirez@integralvenezuela.edu.ve',
+    phone: '+58 (412) 887-2301',
+    department: 'Ciencias Exactas',
+    subjects: ['Matemáticas', 'Física'],
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80',
+  },
+  {
+    id: 'usr-teacher-2',
+    name: 'Prof. Elena Méndez',
+    email: 'elena.mendez@integralvenezuela.edu.ve',
+    phone: '+58 (414) 381-9920',
+    department: 'Humanidades y Lengua',
+    subjects: ['Castellano y Literatura'],
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80',
+  },
+  {
+    id: 'usr-teacher-3',
+    name: 'Prof. Roberto Vargas',
+    email: 'roberto.vargas@integralvenezuela.edu.ve',
+    phone: '+58 (424) 811-3004',
+    department: 'Ciencias Naturales',
+    subjects: ['Química', 'Biología'],
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&auto=format&fit=crop&q=80',
+  },
+  {
+    id: 'usr-teacher-4',
+    name: 'Prof. Sarah Jenkins',
+    email: 'sarah.jenkins@integralvenezuela.edu.ve',
+    phone: '+58 (416) 980-4411',
+    department: 'Idiomas Modernos',
+    subjects: ['Inglés'],
+    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&auto=format&fit=crop&q=80',
+  }
+];
+
+export const initialAdmin = {
+  id: 'usr-admin-1',
+  name: 'Larry González',
+  title: 'Director General',
+  email: 'quinterostudent@gmail.com',
+  role: 'admin',
+  avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&auto=format&fit=crop&q=80',
+  phone: '+58 (414) 820-1122'
+};
+
 export const initialSubjects = [
-  { id: 'sub-mat', name: 'Matemáticas', teacher: 'Prof. Carlos Ramírez', color: '#2563eb', icon: 'Calculator' },
-  { id: 'sub-fis', name: 'Física', teacher: 'Prof. Carlos Ramírez', color: '#0284c7', icon: 'Atom' },
-  { id: 'sub-qui', name: 'Química', teacher: 'Prof. Roberto Vargas', color: '#059669', icon: 'FlaskConical' },
-  { id: 'sub-bio', name: 'Biología', teacher: 'Prof. Roberto Vargas', color: '#16a34a', icon: 'Dna' },
-  { id: 'sub-cas', name: 'Castellano y Literatura', teacher: 'Prof. Elena Méndez', color: '#d97706', icon: 'BookOpen' },
-  { id: 'sub-ing', name: 'Inglés', teacher: 'Prof. Sarah Jenkins', color: '#7c3aed', icon: 'Languages' },
-  { id: 'sub-his', name: 'Historia de Venezuela', teacher: 'Prof. Lisandro Alvarado', color: '#e11d48', icon: 'Landmark' },
-  { id: 'sub-edf', name: 'Educación Física', teacher: 'Prof. Javier Briceño', color: '#ea580c', icon: 'Activity' },
+  { id: 'sub-mat', name: 'Matemáticas', teacher: 'Prof. Carlos Ramírez', teacherId: 'usr-teacher-1', color: '#1e3a8a', icon: 'Calculator' },
+  { id: 'sub-fis', name: 'Física', teacher: 'Prof. Carlos Ramírez', teacherId: 'usr-teacher-1', color: '#0369a1', icon: 'Atom' },
+  { id: 'sub-qui', name: 'Química', teacher: 'Prof. Roberto Vargas', teacherId: 'usr-teacher-3', color: '#047857', icon: 'FlaskConical' },
+  { id: 'sub-bio', name: 'Biología', teacher: 'Prof. Roberto Vargas', teacherId: 'usr-teacher-3', color: '#15803d', icon: 'Dna' },
+  { id: 'sub-cas', name: 'Castellano y Literatura', teacher: 'Prof. Elena Méndez', teacherId: 'usr-teacher-2', color: '#b45309', icon: 'BookOpen' },
+  { id: 'sub-ing', name: 'Inglés', teacher: 'Prof. Sarah Jenkins', teacherId: 'usr-teacher-4', color: '#6d28d9', icon: 'Languages' },
+  { id: 'sub-his', name: 'Historia de Venezuela', teacher: 'Prof. Lisandro Alvarado', teacherId: 'usr-teacher-2', color: '#be123c', icon: 'Landmark' },
+  { id: 'sub-edf', name: 'Educación Física', teacher: 'Prof. Javier Briceño', teacherId: 'usr-teacher-1', color: '#c2410c', icon: 'Activity' },
 ];
 
 export const initialGrades = [
@@ -183,7 +275,7 @@ export const initialGrades = [
     percentage: 20,
     term: '1er Lapso',
     date: '2024-10-14',
-    comments: 'Excelente planteamiento algebraico y orden impecable.'
+    comments: 'Excelente desarrollo analítico y precisión.'
   },
   {
     id: 'gr-2',
@@ -197,7 +289,7 @@ export const initialGrades = [
     percentage: 25,
     term: '1er Lapso',
     date: '2024-11-04',
-    comments: 'Nota máxima. Demostración perfecta de identidades.'
+    comments: 'Nota máxima. Demostración impecable de identidades.'
   },
   {
     id: 'gr-3',
@@ -211,7 +303,7 @@ export const initialGrades = [
     percentage: 20,
     term: '1er Lapso',
     date: '2024-10-21',
-    comments: 'Gran precisión en el cálculo de márgenes de error.'
+    comments: 'Excelente informe técnico y manejo de márgenes de error.'
   },
   {
     id: 'gr-4',
@@ -225,7 +317,7 @@ export const initialGrades = [
     percentage: 20,
     term: '1er Lapso',
     date: '2024-10-28',
-    comments: 'Muy buen dominio de los óxidos y sales.'
+    comments: 'Dominio claro de las reacciones de óxido-reducción.'
   },
   {
     id: 'gr-5',
@@ -233,31 +325,16 @@ export const initialGrades = [
     studentName: 'Valeria Sofía Morales Mendoza',
     subjectId: 'sub-cas',
     subjectName: 'Castellano y Literatura',
-    evaluationTitle: 'Ensayo Crítico sobre Novela Romántica',
+    evaluationTitle: 'Ensayo Crítico sobre Novela Venezolana',
     score: 20.0,
     maxScore: 20,
     percentage: 25,
     term: '1er Lapso',
     date: '2024-11-08',
-    comments: 'Riqueza argumentativa y ortografía perfecta.'
+    comments: 'Riqueza en el vocabulario, cohesión y ortografía impecable.'
   },
   {
     id: 'gr-6',
-    studentId: 'usr-student-1',
-    studentName: 'Valeria Sofía Morales Mendoza',
-    subjectId: 'sub-ing',
-    subjectName: 'Inglés',
-    evaluationTitle: 'Oral Presentation: Global Challenges',
-    score: 19.0,
-    maxScore: 20,
-    percentage: 20,
-    term: '1er Lapso',
-    date: '2024-11-12',
-    comments: 'Fluid speech and natural pronunciation.'
-  },
-  // Grades for student 2 (Alejandro)
-  {
-    id: 'gr-7',
     studentId: 'usr-student-2',
     studentName: 'Alejandro José Gómez Rangel',
     subjectId: 'sub-mat',
@@ -267,47 +344,7 @@ export const initialGrades = [
     percentage: 20,
     term: '1er Lapso',
     date: '2024-10-14',
-    comments: 'Buen trabajo. Reforzar el despeje de radicales.'
-  },
-  {
-    id: 'gr-8',
-    studentId: 'usr-student-2',
-    studentName: 'Alejandro José Gómez Rangel',
-    subjectId: 'sub-mat',
-    evaluationTitle: 'Examen Parcial I: Trigonometría',
-    score: 18.0,
-    maxScore: 20,
-    percentage: 25,
-    term: '1er Lapso',
-    date: '2024-11-04',
-    comments: 'Demostró comprensión de las fórmulas principales.'
-  },
-  // Grades for student 3 (Sofía)
-  {
-    id: 'gr-9',
-    studentId: 'usr-student-3',
-    studentName: 'Sofía Isabella Herrera Peña',
-    subjectId: 'sub-mat',
-    evaluationTitle: 'Taller de Funciones y Dominio',
-    score: 19.0,
-    maxScore: 20,
-    percentage: 20,
-    term: '1er Lapso',
-    date: '2024-10-14',
-    comments: 'Excelente precisión analítica.'
-  },
-  {
-    id: 'gr-10',
-    studentId: 'usr-student-3',
-    studentName: 'Sofía Isabella Herrera Peña',
-    subjectId: 'sub-mat',
-    evaluationTitle: 'Examen Parcial I: Trigonometría',
-    score: 18.5,
-    maxScore: 20,
-    percentage: 25,
-    term: '1er Lapso',
-    date: '2024-11-04',
-    comments: 'Muy bien resueltos los problemas de aplicación.'
+    comments: 'Buen planteamiento, cuidar detalles en signos.'
   }
 ];
 
@@ -317,7 +354,7 @@ export const initialEvaluationPlans = [
     subjectId: 'sub-mat',
     subjectName: 'Matemáticas',
     title: 'Taller Práctico: Funciones Reales y Gráficas',
-    description: 'Análisis de dominio, rango, asíntotas y transformaciones de funciones en papel milimetrado.',
+    description: 'Análisis de dominio, rango y asíntotas.',
     dueDate: '2024-10-14',
     percentage: 20,
     term: '1er Lapso',
@@ -329,7 +366,7 @@ export const initialEvaluationPlans = [
     subjectId: 'sub-mat',
     subjectName: 'Matemáticas',
     title: 'Examen Parcial I: Trigonometría Analítica',
-    description: 'Identidades fundamentales, círculo unitario, razones trigonométricas y teorema del coseno.',
+    description: 'Identidades trigonométricas y teoremas fundamentales.',
     dueDate: '2024-11-04',
     percentage: 25,
     term: '1er Lapso',
@@ -341,7 +378,7 @@ export const initialEvaluationPlans = [
     subjectId: 'sub-mat',
     subjectName: 'Matemáticas',
     title: 'Resolución de Problemas: Geometría del Espacio',
-    description: 'Cálculo de volúmenes, superficies y teoremas euclidianos en sólidos geométricos.',
+    description: 'Cálculo de volúmenes y teoremas euclidianos.',
     dueDate: '2024-11-25',
     percentage: 25,
     term: '1er Lapso',
@@ -350,74 +387,37 @@ export const initialEvaluationPlans = [
   },
   {
     id: 'plan-4',
-    subjectId: 'sub-mat',
-    subjectName: 'Matemáticas',
-    title: 'Proyecto Integrador y Defensa: Aplicaciones en Ingeniería',
-    description: 'Modelo a escala aplicando proporciones y funciones polinómicas.',
-    dueDate: '2024-12-09',
-    percentage: 20,
-    term: '1er Lapso',
-    type: 'Proyecto y Defensa',
-    status: 'Programado'
-  },
-  {
-    id: 'plan-5',
-    subjectId: 'sub-mat',
-    subjectName: 'Matemáticas',
-    title: 'Apreciación y Rasgos de la Personalidad',
-    description: 'Puntualidad, asistencia activa, cuaderno al día y participación constructiva en clase.',
-    dueDate: '2024-12-13',
-    percentage: 10,
-    term: '1er Lapso',
-    type: 'Rasgos y Convivencia',
-    status: 'Programado'
-  },
-  {
-    id: 'plan-6',
     subjectId: 'sub-fis',
     subjectName: 'Física',
     title: 'Práctica de Laboratorio: Caída Libre y MRUV',
-    description: 'Medición de aceleración de la gravedad con fotopuertas y cronómetros.',
+    description: 'Medición de la gravedad y dinámica de movimiento.',
     dueDate: '2024-10-21',
     percentage: 25,
     term: '1er Lapso',
     type: 'Laboratorio',
     status: 'Completado'
-  },
-  {
-    id: 'plan-7',
-    subjectId: 'sub-fis',
-    subjectName: 'Física',
-    title: 'Examen Teórico-Práctico: Dinámica y Leyes de Newton',
-    description: 'Diagramas de cuerpo libre, fuerzas de fricción y planos inclinados.',
-    dueDate: '2024-11-18',
-    percentage: 30,
-    term: '1er Lapso',
-    type: 'Examen Escrito',
-    status: 'En Progreso'
   }
 ];
 
 export const initialSchedules = [
-  { day: 'Lunes', time: '07:00 - 08:30 AM', subject: 'Matemáticas', classroom: 'Aula 204', teacher: 'Prof. Carlos Ramírez', color: 'bg-blue-50 border-blue-500 text-blue-700' },
-  { day: 'Lunes', time: '08:45 - 10:15 AM', subject: 'Física (Teoría)', classroom: 'Aula 204', teacher: 'Prof. Carlos Ramírez', color: 'bg-sky-50 border-sky-500 text-sky-700' },
-  { day: 'Lunes', time: '10:30 - 12:00 PM', subject: 'Castellano y Lit.', classroom: 'Aula 204', teacher: 'Prof. Elena Méndez', color: 'bg-amber-50 border-amber-500 text-amber-700' },
+  { id: 'sch-1', day: 'Lunes', time: '07:00 - 08:30 AM', subject: 'Matemáticas', classroom: 'Aula 2 - Andrés Bello (A-102)', classroomCode: 'A-102', teacher: 'Prof. Carlos Ramírez', teacherId: 'usr-teacher-1' },
+  { id: 'sch-2', day: 'Lunes', time: '08:45 - 10:15 AM', subject: 'Física (Teoría)', classroom: 'Aula 2 - Andrés Bello (A-102)', classroomCode: 'A-102', teacher: 'Prof. Carlos Ramírez', teacherId: 'usr-teacher-1' },
+  { id: 'sch-3', day: 'Lunes', time: '10:30 - 12:00 PM', subject: 'Castellano y Literatura', classroom: 'Aula 2 - Andrés Bello (A-102)', classroomCode: 'A-102', teacher: 'Prof. Elena Méndez', teacherId: 'usr-teacher-2' },
   
-  { day: 'Martes', time: '07:00 - 08:30 AM', subject: 'Química', classroom: 'Lab. Química', teacher: 'Prof. Roberto Vargas', color: 'bg-emerald-50 border-emerald-500 text-emerald-700' },
-  { day: 'Martes', time: '08:45 - 10:15 AM', subject: 'Biología', classroom: 'Lab. Biología', teacher: 'Prof. Roberto Vargas', color: 'bg-green-50 border-green-500 text-green-700' },
-  { day: 'Martes', time: '10:30 - 12:00 PM', subject: 'Inglés', classroom: 'Aula de Idiomas', teacher: 'Prof. Sarah Jenkins', color: 'bg-purple-50 border-purple-500 text-purple-700' },
+  { id: 'sch-4', day: 'Martes', time: '07:00 - 08:30 AM', subject: 'Química', classroom: 'Laboratorio de Ciencias (LAB-01)', classroomCode: 'LAB-01', teacher: 'Prof. Roberto Vargas', teacherId: 'usr-teacher-3' },
+  { id: 'sch-5', day: 'Martes', time: '08:45 - 10:15 AM', subject: 'Biología', classroom: 'Laboratorio de Ciencias (LAB-01)', classroomCode: 'LAB-01', teacher: 'Prof. Roberto Vargas', teacherId: 'usr-teacher-3' },
+  { id: 'sch-6', day: 'Martes', time: '10:30 - 12:00 PM', subject: 'Inglés', classroom: 'Aula 1 - Simón Bolívar (A-101)', classroomCode: 'A-101', teacher: 'Prof. Sarah Jenkins', teacherId: 'usr-teacher-4' },
 
-  { day: 'Miércoles', time: '07:00 - 08:30 AM', subject: 'Física (Laboratorio)', classroom: 'Lab. Física', teacher: 'Prof. Carlos Ramírez', color: 'bg-sky-50 border-sky-500 text-sky-700' },
-  { day: 'Miércoles', time: '08:45 - 10:15 AM', subject: 'Matemáticas', classroom: 'Aula 204', teacher: 'Prof. Carlos Ramírez', color: 'bg-blue-50 border-blue-500 text-blue-700' },
-  { day: 'Miércoles', time: '10:30 - 12:00 PM', subject: 'Historia de Vzla', classroom: 'Aula 204', teacher: 'Prof. Lisandro Alvarado', color: 'bg-rose-50 border-rose-500 text-rose-700' },
+  { id: 'sch-7', day: 'Miércoles', time: '07:00 - 08:30 AM', subject: 'Física (Laboratorio)', classroom: 'Laboratorio de Ciencias (LAB-01)', classroomCode: 'LAB-01', teacher: 'Prof. Carlos Ramírez', teacherId: 'usr-teacher-1' },
+  { id: 'sch-8', day: 'Miércoles', time: '08:45 - 10:15 AM', subject: 'Matemáticas', classroom: 'Aula 2 - Andrés Bello (A-102)', classroomCode: 'A-102', teacher: 'Prof. Carlos Ramírez', teacherId: 'usr-teacher-1' },
+  { id: 'sch-9', day: 'Miércoles', time: '10:30 - 12:00 PM', subject: 'Historia de Venezuela', classroom: 'Aula 2 - Andrés Bello (A-102)', classroomCode: 'A-102', teacher: 'Prof. Elena Méndez', teacherId: 'usr-teacher-2' },
 
-  { day: 'Jueves', time: '07:00 - 08:30 AM', subject: 'Educación Física', classroom: 'Canchas Techadas', teacher: 'Prof. Javier Briceño', color: 'bg-orange-50 border-orange-500 text-orange-700' },
-  { day: 'Jueves', time: '08:45 - 10:15 AM', subject: 'Castellano y Lit.', classroom: 'Aula 204', teacher: 'Prof. Elena Méndez', color: 'bg-amber-50 border-amber-500 text-amber-700' },
-  { day: 'Jueves', time: '10:30 - 12:00 PM', subject: 'Inglés', classroom: 'Aula de Idiomas', teacher: 'Prof. Sarah Jenkins', color: 'bg-purple-50 border-purple-500 text-purple-700' },
+  { id: 'sch-10', day: 'Jueves', time: '07:00 - 08:30 AM', subject: 'Educación Física', classroom: 'Cancha Deportiva Principal (DEP-01)', classroomCode: 'DEP-01', teacher: 'Prof. Javier Briceño', teacherId: 'usr-teacher-1' },
+  { id: 'sch-11', day: 'Jueves', time: '08:45 - 10:15 AM', subject: 'Castellano y Literatura', classroom: 'Aula 2 - Andrés Bello (A-102)', classroomCode: 'A-102', teacher: 'Prof. Elena Méndez', teacherId: 'usr-teacher-2' },
+  { id: 'sch-12', day: 'Jueves', time: '10:30 - 12:00 PM', subject: 'Inglés', classroom: 'Aula 1 - Simón Bolívar (A-101)', classroomCode: 'A-101', teacher: 'Prof. Sarah Jenkins', teacherId: 'usr-teacher-4' },
 
-  { day: 'Viernes', time: '07:00 - 08:30 AM', subject: 'Química (Práctica)', classroom: 'Lab. Química', teacher: 'Prof. Roberto Vargas', color: 'bg-emerald-50 border-emerald-500 text-emerald-700' },
-  { day: 'Viernes', time: '08:45 - 10:15 AM', subject: 'Orientación y Convivencia', classroom: 'Aula 204', teacher: 'Prof. Carlos Ramírez', color: 'bg-indigo-50 border-indigo-500 text-indigo-700' },
-  { day: 'Viernes', time: '10:30 - 12:00 PM', subject: 'Club Científico / Robótica', classroom: 'Sala STEM', teacher: 'Equipo Docente', color: 'bg-cyan-50 border-cyan-500 text-cyan-700' }
+  { id: 'sch-13', day: 'Viernes', time: '07:00 - 08:30 AM', subject: 'Química (Práctica)', classroom: 'Laboratorio de Ciencias (LAB-01)', classroomCode: 'LAB-01', teacher: 'Prof. Roberto Vargas', teacherId: 'usr-teacher-3' },
+  { id: 'sch-14', day: 'Viernes', time: '08:45 - 10:15 AM', subject: 'Orientación y Convivencia', classroom: 'Aula 2 - Andrés Bello (A-102)', classroomCode: 'A-102', teacher: 'Prof. Carlos Ramírez', teacherId: 'usr-teacher-1' },
 ];
 
 export const initialAttendances = [
@@ -429,9 +429,9 @@ export const initialAttendances = [
     date: '2024-10-18',
     status: 'justified',
     statusLabel: 'Falta Justificada',
-    notes: 'Presentó justificativo médico por consulta odontológica con sello.',
+    notes: 'Presentó justificativo médico con sello de consulta odontológica.',
     notified: true,
-    sentTo: 'valeria.morales@liceobicentenario.edu.ve (Representante)'
+    sentTo: 'carlos.morales@gmail.com'
   },
   {
     id: 'att-2',
@@ -440,10 +440,10 @@ export const initialAttendances = [
     subject: 'Física',
     date: '2024-10-23',
     status: 'late',
-    statusLabel: 'Llegada Tarde (20 min)',
-    notes: 'Retraso por tráfico en la vía de acceso. Ingresó a la segunda hora.',
+    statusLabel: 'Llegada Tarde (15 min)',
+    notes: 'Retraso de transporte matutino en el puente Neverí.',
     notified: true,
-    sentTo: 'alejandro.gomez@liceobicentenario.edu.ve'
+    sentTo: 'mariana.rangel@gmail.com'
   },
   {
     id: 'att-3',
@@ -453,9 +453,9 @@ export const initialAttendances = [
     date: '2024-11-06',
     status: 'absent',
     statusLabel: 'Falta Injustificada',
-    notes: 'No asistió a la primera hora de clase. Notificación enviada al representante.',
+    notes: 'Inasistencia a la primera hora. Notificación transmitida.',
     notified: true,
-    sentTo: 'andres.castillo@liceobicentenario.edu.ve'
+    sentTo: 'patricia.rojas@gmail.com'
   }
 ];
 
@@ -471,119 +471,154 @@ export const initialCertificates = [
     academicYear: '2024 - 2025',
     average: '19.3 pts',
     issueDate: '28 de Noviembre de 2024',
-    code: 'CERT-HONOR-2024-0089',
-    description: 'Otorgado en reconocimiento por alcanzar el Primer Lugar del Cuadro de Honor con un promedio sobresaliente, demostrando disciplina, compromiso y valores liceístas.',
-    signer: 'Dra. Carmen Teresa Mendoza, Directora General'
+    code: 'CERT-IV-2024-0089',
+    description: 'Otorgado en reconocimiento por alcanzar el Primer Lugar del Cuadro de Honor con un promedio sobresaliente, demostrando disciplina, compromiso y los valores del Colegio Integral Venezuela.',
+    signer: 'Larry González, Director General'
   },
   {
     id: 'cert-2',
     studentId: 'usr-student-1',
     studentName: 'Valeria Sofía Morales Mendoza',
-    title: 'Mención Especial en la Olimpiada Juvenil de Matemáticas',
+    title: 'Mención Especial en la Olimpiada Juvenil de Ciencias',
     type: 'merit',
     typeLabel: 'Mérito Científico',
     gradeLevel: '4to Año de Bachillerato',
     academicYear: '2024 - 2025',
-    average: 'Fase Regional',
+    average: 'Fase Regional Anzoátegui',
     issueDate: '15 de Octubre de 2024',
-    code: 'CERT-OLYMP-2024-014',
-    description: 'Por su brillante participación y clasificación sobresaliente en la fase regional de la Olimpiada Venezolana de Matemáticas, representando con orgullo al liceo.',
-    signer: 'Prof. Carlos Eduardo Ramírez, Coordinador de Ciencias'
-  },
-  {
-    id: 'cert-3',
-    studentId: 'usr-student-3',
-    studentName: 'Sofía Isabella Herrera Peña',
-    title: 'Reconocimiento a la Asistencia Perfecta y Ciudadanía',
-    type: 'conduct',
-    typeLabel: 'Valores y Convivencia',
-    gradeLevel: '4to Año de Bachillerato',
-    academicYear: '2024 - 2025',
-    average: '100% Asistencia',
-    issueDate: '30 de Noviembre de 2024',
-    code: 'CERT-ATT-2024-0052',
-    description: 'Por su admirable puntualidad, constancia ininterrumpida y comportamiento ejemplar a lo largo del período lectivo.',
-    signer: 'Prof. Marcos Aurelio Peña, Dirección Académica'
+    code: 'CERT-IV-2024-014',
+    description: 'Por su destacada participación y clasificación en la fase regional de Anzoátegui, representando con orgullo al Colegio Integral Venezuela.',
+    signer: 'Larry González, Director General'
   }
 ];
 
+// Memories now support student contribution (by year/grade)
 export const initialMemories = [
   {
     id: 'mem-1',
-    title: 'Feria Científica y Tecnológica Escolar 2024',
-    category: 'Ciencia y Robótica',
+    title: 'Feria de Ciencias y Tecnología "Neverí 2024"',
+    category: 'Proyectos',
+    gradeYear: '4to Año',
+    authorName: 'Valeria Morales (Estudiante)',
     date: '18 de Mayo de 2024',
     image: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=80',
-    description: 'Estudiantes de 4to y 5to año presentaron proyectos sostenibles con paneles solares, filtración de agua y brazos robóticos controlados con sensores.'
+    description: 'Nuestro equipo de 4to Año presentó el prototipo de purificación biológica de agua. ¡Ganamos el 1er lugar del liceo!'
   },
   {
     id: 'mem-2',
-    title: 'Campeonato Intercolegial de Baloncesto',
+    title: 'Campeones del Torneo Intercolegial de Barcelona',
     category: 'Deportes',
+    gradeYear: '4to Año',
+    authorName: 'Alejandro Gómez (Estudiante)',
     date: '4 de Junio de 2024',
     image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=800&auto=format&fit=crop&q=80',
-    description: 'La selección liceísta se coronó campeona tras un emocionante partido final contra el Colegio San Ignacio. ¡Orgullo Bicentenario!'
+    description: 'Victoria en la final de baloncesto en el gimnasio del Neverí. Orgullo Integral Venezuela.'
   },
   {
     id: 'mem-3',
-    title: 'Gala de la XXXV Promoción de Bachilleres',
-    category: 'Graduaciones',
+    title: 'XXXIV Acto de Graduación de Bachilleres',
+    category: 'Graduación',
+    gradeYear: '5to Año',
+    authorName: 'Dirección Académica',
     date: '22 de Julio de 2024',
     image: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&auto=format&fit=crop&q=80',
-    description: 'Emotiva ceremonia en el Auditorio Mayor donde 140 jóvenes recibieron su título de bachiller, listos para la vida universitaria.'
+    description: 'Entrega de títulos a la promoción saliente con un 100% de ingreso universitario.'
   },
   {
     id: 'mem-4',
-    title: 'Festival Tradicional de Danza y Música Folclórica',
-    category: 'Cultura y Tradición',
-    date: '12 de Abril de 2024',
-    image: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&auto=format&fit=crop&q=80',
-    description: 'Muestra cultural con joropo, parrandas, gaitas y artesanía tradicional venezolana elaborada por los estudiantes de arte.'
-  },
-  {
-    id: 'mem-5',
-    title: 'Jornada Ecológica y Siembra Comunitaria',
-    category: 'Medio Ambiente',
+    title: 'Jornada Ecológica en Colinas del Neverí',
+    category: 'Comunidad',
+    gradeYear: '3er Año',
+    authorName: 'Sofía Herrera (Estudiante)',
     date: '20 de Marzo de 2024',
     image: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?w=800&auto=format&fit=crop&q=80',
-    description: 'Siembra de más de 80 árboles autóctonos en los jardines exteriores y creación del nuevo huerto escolar de biología.'
+    description: 'Siembra comunitaria y preservación de especies autóctonas en los alrededores de nuestra sede escolar.'
+  }
+];
+
+export const initialPayments = [
+  {
+    id: 'pay-1',
+    representativeId: 'rep-1',
+    representativeName: 'Carlos Morales',
+    studentId: 'usr-student-1',
+    studentName: 'Valeria Sofía Morales Mendoza',
+    studentGrade: '4to Año - Sección A',
+    amount: 60.00,
+    currency: 'USD',
+    paymentMethod: 'Pago Móvil',
+    referenceNumber: '0102-849201',
+    paymentConcept: 'Mensualidad Octubre 2024',
+    receiptUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=500&auto=format&fit=crop&q=80',
+    paymentDate: '2024-10-05',
+    status: 'approved',
+    adminNotes: 'Verificado exitosamente en cuenta Banesco.',
+    createdAt: '2024-10-05T10:30:00Z'
   },
   {
-    id: 'mem-6',
-    title: 'Olimpiadas de Robótica y Programación',
-    category: 'Tecnología',
-    date: '8 de Febrero de 2024',
-    image: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=800&auto=format&fit=crop&q=80',
-    description: 'Desafíos de programación en Python y carreras de robots seguidores de línea construidos en los talleres extraescolares.'
+    id: 'pay-2',
+    representativeId: 'rep-1',
+    representativeName: 'Carlos Morales',
+    studentId: 'usr-student-1',
+    studentName: 'Valeria Sofía Morales Mendoza',
+    studentGrade: '4to Año - Sección A',
+    amount: 60.00,
+    currency: 'USD',
+    paymentMethod: 'Transferencia Bancaria',
+    referenceNumber: 'REF-9923841',
+    paymentConcept: 'Mensualidad Noviembre 2024',
+    receiptUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=500&auto=format&fit=crop&q=80',
+    paymentDate: '2024-11-02',
+    status: 'pending',
+    adminNotes: 'En proceso de conciliación bancaria.',
+    createdAt: '2024-11-02T14:15:00Z'
+  },
+  {
+    id: 'pay-3',
+    representativeId: 'rep-2',
+    representativeName: 'Mariana Rangel',
+    studentId: 'usr-student-2',
+    studentName: 'Alejandro José Gómez Rangel',
+    studentGrade: '4to Año - Sección A',
+    amount: 60.00,
+    currency: 'USD',
+    paymentMethod: 'Zelle',
+    referenceNumber: 'ZELLE-881203',
+    paymentConcept: 'Mensualidad Octubre 2024',
+    receiptUrl: '',
+    paymentDate: '2024-10-04',
+    status: 'approved',
+    adminNotes: 'Aprobado por Dirección.',
+    createdAt: '2024-10-04T09:00:00Z'
   }
 ];
 
 export const initialAnnouncements = [
   {
     id: 'ann-1',
-    title: 'Período Oficial de Inscripciones y Reingresos 2024-2025',
-    date: 'Hoy a las 09:00 AM',
+    title: 'Aniversario Institucional: 35 Años Enseñando a Vivir',
+    date: '10 de Noviembre de 2024',
     priority: 'urgent',
-    priorityLabel: 'Urgente / Importante',
+    priorityLabel: 'Institucional',
     roleTarget: 'Todos',
-    content: 'Se hace saber a padres, representantes y estudiantes que el lapso formal de entrega de recaudos estará activo hasta el 30 de este mes. Recuerden traer fotos y notas certificadas en carpeta marrón oficio.'
+    content: 'Con gran orgullo celebramos el 35º aniversario de nuestra fundación en Barcelona. Convocamos a estudiantes, representantes y egresados al acto solemne y jornada cultural conmemorativa.'
   },
   {
     id: 'ann-2',
-    title: 'Publicación de Notas del 1er Lapso y Entrega de Boletines',
-    date: 'Ayer',
+    title: 'Publicación de Boletines Parciales del 1er Lapso',
+    date: 'Noviembre 2024',
     priority: 'normal',
     priorityLabel: 'Académico',
-    roleTarget: 'Estudiantes',
-    content: 'Las notas parciales de todas las materias ya están cargadas en el sistema. Los representantes podrán consultar el consolidado y el boletín imprimible desde este portal.'
+    roleTarget: 'Representantes',
+    content: 'Estimados representantes: ya se encuentran disponibles en el portal las calificaciones y observaciones pedagógicas correspondientes al 1er Lapso.'
   },
   {
     id: 'ann-3',
-    title: 'Convocatoria al Consejo General de Profesores',
-    date: 'Hace 3 días',
-    priority: 'info',
+    title: 'Planificación de Evaluaciones y Horarios Docentes',
+    date: 'Semanal',
+    priority: 'normal',
     priorityLabel: 'Docentes',
     roleTarget: 'Profesores',
-    content: 'Reunión de coordinación pedagógica y evaluación de fin de lapso el próximo jueves a las 2:00 PM en la Sala de Conferencias A.'
+    content: 'Recordatorio al cuerpo profesoral de consignar los cortes de notas y verificar la asignación de aulas en su panel docente.'
   }
 ];

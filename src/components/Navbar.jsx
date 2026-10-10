@@ -2,20 +2,16 @@ import React, { useState } from 'react';
 import {
   GraduationCap,
   School,
+  Users,
+  ShieldCheck,
   LogOut,
-  User,
   Menu,
   X,
   Phone,
   Mail,
-  Clock,
-  Sparkles,
+  MapPin,
   ChevronDown,
-  LayoutDashboard,
-  Calendar,
-  BookOpen,
-  Award,
-  Image as ImageIcon
+  LayoutDashboard
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
@@ -26,176 +22,146 @@ export default function Navbar() {
     setActiveTab,
     setAuthModalOpen,
     setTargetAuthRole,
-    loginAsDemoStudent,
-    loginAsDemoTeacher,
     logout,
     institution,
   } = useApp();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [demoDropdownOpen, setDemoDropdownOpen] = useState(false);
+  const [accessDropdownOpen, setAccessDropdownOpen] = useState(false);
 
   const openAuth = (role) => {
     setTargetAuthRole(role);
     setAuthModalOpen(true);
     setMobileMenuOpen(false);
+    setAccessDropdownOpen(false);
   };
 
-  const scrollToSection = (id) => {
-    setActiveTab('home');
-    setMobileMenuOpen(false);
-    setTimeout(() => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth' });
-      }
-    }, 100);
+  const getPortalTabForUser = () => {
+    if (!currentUser) return 'home';
+    if (currentUser.role === 'admin') return 'admin-portal';
+    if (currentUser.role === 'teacher') return 'teacher-portal';
+    if (currentUser.role === 'representative') return 'representative-portal';
+    return 'student-portal';
+  };
+
+  const getRoleLabel = () => {
+    if (!currentUser) return '';
+    if (currentUser.role === 'admin') return 'Director / Administrador';
+    if (currentUser.role === 'teacher') return 'Docente Titular';
+    if (currentUser.role === 'representative') return 'Representante Legal';
+    return 'Estudiante Regular';
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100 shadow-xs">
-      {/* Top micro-bar */}
-      <div className="bg-slate-900 text-slate-300 text-xs py-1.5 px-4 hidden md:block">
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-2xs">
+      {/* Top Institutional Micro-bar */}
+      <div className="bg-slate-900 text-slate-300 text-[11px] py-1.5 px-4 hidden md:block">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-6">
             <span className="flex items-center gap-1.5">
-              <Phone className="w-3.5 h-3.5 text-blue-400" />
+              <MapPin className="w-3.5 h-3.5 text-slate-400" />
+              <span>{institution.address}</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Phone className="w-3.5 h-3.5 text-slate-400" />
               <span>{institution.phone.split('/')[0]}</span>
             </span>
             <span className="flex items-center gap-1.5">
-              <Mail className="w-3.5 h-3.5 text-blue-400" />
+              <Mail className="w-3.5 h-3.5 text-slate-400" />
               <span>{institution.email}</span>
             </span>
-            <span className="flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-emerald-400" />
-              <span>{institution.schedule}</span>
-            </span>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium text-[11px]">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              {institution.admissions.status}
-            </span>
-            {/* Fast demo login switch */}
-            <div className="relative">
-              <button
-                onClick={() => setDemoDropdownOpen(!demoDropdownOpen)}
-                className="flex items-center gap-1 text-[11px] text-yellow-300 hover:text-yellow-200 font-semibold bg-white/10 px-2.5 py-0.5 rounded-md transition"
-              >
-                <Sparkles className="w-3 h-3 text-yellow-300" />
-                <span>Acceso Demo</span>
-                <ChevronDown className="w-3 h-3" />
-              </button>
-              {demoDropdownOpen && (
-                <div
-                  className="absolute right-0 mt-1 w-52 bg-white text-slate-800 rounded-xl shadow-xl border border-slate-100 py-1 z-50 text-xs"
-                  onClick={() => setDemoDropdownOpen(false)}
-                >
-                  <button
-                    onClick={() => loginAsDemoStudent()}
-                    className="w-full text-left px-3 py-2 hover:bg-blue-50 flex items-center gap-2 font-medium"
-                  >
-                    <GraduationCap className="w-4 h-4 text-blue-600" />
-                    <span>Entrar como Estudiante</span>
-                  </button>
-                  <button
-                    onClick={() => loginAsDemoTeacher()}
-                    className="w-full text-left px-3 py-2 hover:bg-indigo-50 flex items-center gap-2 font-medium"
-                  >
-                    <School className="w-4 h-4 text-indigo-600" />
-                    <span>Entrar como Profesor/Admin</span>
-                  </button>
-                </div>
-              )}
-            </div>
+
+          <div className="flex items-center gap-4 text-slate-400">
+            <span>Fundado el {institution.foundedDate}</span>
+            <span className="text-slate-600">•</span>
+            <span className="text-slate-200 italic font-serif">"{institution.motto}"</span>
           </div>
         </div>
       </div>
 
-      {/* Main navigation bar */}
+      {/* Main Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20">
-          {/* Logo & Brand */}
+        <div className="flex justify-between items-center h-18">
+          {/* Brand Logo */}
           <div
             onClick={() => setActiveTab('home')}
-            className="flex items-center gap-3.5 cursor-pointer group"
+            className="flex items-center gap-3 cursor-pointer group"
           >
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-700 via-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 group-hover:scale-105 transition">
-              <GraduationCap className="w-7 h-7 text-white" />
+            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white font-bold group-hover:bg-blue-900 transition">
+              <School className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="font-heading font-extrabold text-xl text-slate-900 tracking-tight leading-tight group-hover:text-blue-600 transition">
+              <div className="font-heading font-extrabold text-base sm:text-lg text-slate-900 tracking-tight leading-tight group-hover:text-blue-900 transition">
                 {institution.name}
               </div>
-              <p className="text-xs text-slate-500 font-medium">
-                Educación Media General • Fundado en {institution.foundedYear}
+              <p className="text-[11px] text-slate-500 font-medium">
+                Barcelona, Anzoátegui • Lema: {institution.motto}
               </p>
             </div>
           </div>
 
-          {/* Center Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-1 text-sm font-medium text-slate-600">
+          {/* Nav links */}
+          <nav className="hidden lg:flex items-center gap-1 text-xs font-semibold text-slate-600">
             <button
               onClick={() => setActiveTab('home')}
-              className={`px-3.5 py-2 rounded-xl transition ${
+              className={`px-3 py-2 rounded-lg transition ${
                 activeTab === 'home'
-                  ? 'text-blue-700 bg-blue-50 font-semibold'
-                  : 'hover:text-blue-600 hover:bg-slate-50'
+                  ? 'text-slate-900 bg-slate-100 font-bold'
+                  : 'hover:text-slate-900 hover:bg-slate-50'
               }`}
             >
               Inicio
             </button>
-            <button
-              onClick={() => scrollToSection('identidad')}
-              className="px-3.5 py-2 rounded-xl hover:text-blue-600 hover:bg-slate-50 transition"
+            <a
+              href="#identidad"
+              onClick={() => setActiveTab('home')}
+              className="px-3 py-2 rounded-lg hover:text-slate-900 hover:bg-slate-50 transition"
             >
-              Misión y Valores
-            </button>
-            <button
-              onClick={() => scrollToSection('inscripciones')}
-              className="px-3.5 py-2 rounded-xl hover:text-blue-600 hover:bg-slate-50 transition"
+              Identidad & Valores
+            </a>
+            <a
+              href="#inscripciones"
+              onClick={() => setActiveTab('home')}
+              className="px-3 py-2 rounded-lg hover:text-slate-900 hover:bg-slate-50 transition"
             >
-              Inscripciones
-            </button>
-            <button
-              onClick={() => scrollToSection('galeria')}
-              className="px-3.5 py-2 rounded-xl hover:text-blue-600 hover:bg-slate-50 transition"
+              Admisiones
+            </a>
+            <a
+              href="#instalaciones"
+              onClick={() => setActiveTab('home')}
+              className="px-3 py-2 rounded-lg hover:text-slate-900 hover:bg-slate-50 transition"
             >
-              Galería & Recuerdos
-            </button>
-            <button
-              onClick={() => scrollToSection('contacto')}
-              className="px-3.5 py-2 rounded-xl hover:text-blue-600 hover:bg-slate-50 transition"
+              Instalaciones & Galería
+            </a>
+            <a
+              href="#contacto"
+              onClick={() => setActiveTab('home')}
+              className="px-3 py-2 rounded-lg hover:text-slate-900 hover:bg-slate-50 transition"
             >
               Ubicación & Contacto
-            </button>
+            </a>
           </nav>
 
-          {/* Action Buttons / User Menu */}
+          {/* Portals Access / User Profile */}
           <div className="hidden sm:flex items-center gap-3">
             {currentUser ? (
-              <div className="flex items-center gap-3 bg-slate-50 p-1.5 pr-3 rounded-2xl border border-slate-200">
+              <div className="flex items-center gap-2.5 bg-slate-50 p-1.5 pr-2.5 rounded-xl border border-slate-200">
                 <img
                   src={currentUser.avatar}
                   alt={currentUser.name}
-                  className="w-9 h-9 rounded-xl object-cover border border-white shadow-xs"
+                  className="w-8 h-8 rounded-lg object-cover border border-slate-300"
                 />
-                <div className="text-left">
-                  <div className="text-xs font-bold text-slate-800 line-clamp-1 max-w-[140px]">
+                <div className="text-left text-xs">
+                  <div className="font-bold text-slate-900 max-w-[150px] truncate">
                     {currentUser.name}
                   </div>
-                  <div className="text-[10px] text-blue-600 font-semibold uppercase tracking-wider">
-                    {currentUser.role === 'teacher' ? 'Docente / Admin' : 'Estudiante'}
-                  </div>
+                  <div className="text-[10px] text-blue-700 font-semibold">{getRoleLabel()}</div>
                 </div>
 
                 <button
-                  onClick={() =>
-                    setActiveTab(
-                      currentUser.role === 'teacher' ? 'teacher-portal' : 'student-portal'
-                    )
-                  }
-                  className="ml-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs flex items-center gap-1.5 transition"
+                  onClick={() => setActiveTab(getPortalTabForUser())}
+                  className="ml-2 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition"
                 >
                   <LayoutDashboard className="w-3.5 h-3.5" />
                   <span>Mi Panel</span>
@@ -204,36 +170,66 @@ export default function Navbar() {
                 <button
                   onClick={logout}
                   title="Cerrar Sesión"
-                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition"
+                  className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
               </div>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="relative">
                 <button
-                  onClick={() => openAuth('student')}
-                  className="px-4 py-2.5 rounded-xl border border-blue-600/30 text-blue-700 hover:bg-blue-50 font-semibold text-xs transition flex items-center gap-1.5"
+                  onClick={() => setAccessDropdownOpen(!accessDropdownOpen)}
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs rounded-lg shadow-2xs transition flex items-center gap-1.5"
                 >
-                  <GraduationCap className="w-4 h-4 text-blue-600" />
-                  <span>Portal Estudiante</span>
+                  <span>Acceso a Portales</span>
+                  <ChevronDown className="w-3.5 h-3.5" />
                 </button>
-                <button
-                  onClick={() => openAuth('teacher')}
-                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-700 to-indigo-700 hover:from-blue-800 hover:to-indigo-800 text-white font-semibold text-xs shadow-md shadow-blue-600/20 transition flex items-center gap-1.5"
-                >
-                  <School className="w-4 h-4 text-blue-200" />
-                  <span>Portal Docente / Admin</span>
-                </button>
+
+                {accessDropdownOpen && (
+                  <div
+                    className="absolute right-0 mt-1.5 w-56 bg-white text-slate-800 rounded-xl shadow-xl border border-slate-200 py-1.5 z-50 text-xs font-medium"
+                    onClick={() => setAccessDropdownOpen(false)}
+                  >
+                    <button
+                      onClick={() => openAuth('student')}
+                      className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2.5 text-slate-700"
+                    >
+                      <GraduationCap className="w-4 h-4 text-blue-700" />
+                      <span>Portal Estudiantes</span>
+                    </button>
+                    <button
+                      onClick={() => openAuth('representative')}
+                      className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2.5 text-slate-700"
+                    >
+                      <Users className="w-4 h-4 text-emerald-700" />
+                      <span>Portal Representantes (Pagos)</span>
+                    </button>
+                    <button
+                      onClick={() => openAuth('teacher')}
+                      className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2.5 text-slate-700"
+                    >
+                      <School className="w-4 h-4 text-indigo-700" />
+                      <span>Portal Docentes (Horarios)</span>
+                    </button>
+                    <div className="my-1 border-t border-slate-100"></div>
+                    <button
+                      onClick={() => openAuth('admin')}
+                      className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2.5 text-slate-900 font-semibold"
+                    >
+                      <ShieldCheck className="w-4 h-4 text-rose-700" />
+                      <span>Panel Administrativo</span>
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          {/* Mobile menu hamburger */}
-          <div className="flex items-center gap-2 sm:hidden">
+          {/* Mobile hamburger */}
+          <div className="flex items-center sm:hidden">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition"
+              className="p-2 text-slate-700 rounded-lg hover:bg-slate-100 transition"
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -241,121 +237,83 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Drawer Menu */}
+      {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-slate-100 bg-white px-4 pt-3 pb-6 space-y-3 animate-fade-in shadow-xl">
-          <nav className="flex flex-col gap-1 text-sm font-medium text-slate-700">
+        <div className="lg:hidden border-t border-slate-100 bg-white px-4 pt-3 pb-6 space-y-3 animate-fade-in shadow-xl text-xs">
+          <nav className="flex flex-col gap-1 font-medium text-slate-700">
             <button
-              onClick={() => {
-                setActiveTab('home');
-                setMobileMenuOpen(false);
-              }}
-              className="text-left px-3 py-2 rounded-xl hover:bg-slate-50 font-medium"
+              onClick={() => { setActiveTab('home'); setMobileMenuOpen(false); }}
+              className="text-left px-3 py-2 rounded-lg hover:bg-slate-50 font-medium"
             >
               Inicio
             </button>
-            <button
-              onClick={() => scrollToSection('identidad')}
-              className="text-left px-3 py-2 rounded-xl hover:bg-slate-50 font-medium"
+            <a
+              href="#identidad"
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-left px-3 py-2 rounded-lg hover:bg-slate-50"
             >
-              Misión y Valores
-            </button>
-            <button
-              onClick={() => scrollToSection('inscripciones')}
-              className="text-left px-3 py-2 rounded-xl hover:bg-slate-50 font-medium"
+              Identidad & Valores
+            </a>
+            <a
+              href="#inscripciones"
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-left px-3 py-2 rounded-lg hover:bg-slate-50"
             >
-              Inscripciones y Requisitos
-            </button>
-            <button
-              onClick={() => scrollToSection('galeria')}
-              className="text-left px-3 py-2 rounded-xl hover:bg-slate-50 font-medium"
+              Admisiones
+            </a>
+            <a
+              href="#contacto"
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-left px-3 py-2 rounded-lg hover:bg-slate-50"
             >
-              Galería de Fotos y Recuerdos
-            </button>
-            <button
-              onClick={() => scrollToSection('contacto')}
-              className="text-left px-3 py-2 rounded-xl hover:bg-slate-50 font-medium"
-            >
-              Ubicación y Contacto
-            </button>
+              Ubicación & Contacto
+            </a>
           </nav>
 
           <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
             {currentUser ? (
               <>
-                <div className="flex items-center gap-3 p-2 bg-slate-50 rounded-xl">
-                  <img
-                    src={currentUser.avatar}
-                    alt={currentUser.name}
-                    className="w-9 h-9 rounded-full object-cover"
-                  />
-                  <div>
-                    <div className="text-xs font-bold text-slate-800">{currentUser.name}</div>
-                    <div className="text-[10px] text-blue-600 uppercase font-semibold">
-                      {currentUser.role === 'teacher' ? 'Docente' : 'Estudiante'}
-                    </div>
-                  </div>
-                </div>
                 <button
-                  onClick={() => {
-                    setActiveTab(
-                      currentUser.role === 'teacher' ? 'teacher-portal' : 'student-portal'
-                    );
-                    setMobileMenuOpen(false);
-                  }}
-                  className="w-full py-2.5 bg-blue-600 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2"
+                  onClick={() => { setActiveTab(getPortalTabForUser()); setMobileMenuOpen(false); }}
+                  className="w-full py-2.5 bg-slate-900 text-white font-medium rounded-lg flex items-center justify-center gap-2"
                 >
                   <LayoutDashboard className="w-4 h-4" />
-                  <span>Ir a Mi Panel de Control</span>
+                  <span>Ir a Mi Panel ({currentUser.role})</span>
                 </button>
                 <button
-                  onClick={() => {
-                    logout();
-                    setMobileMenuOpen(false);
-                  }}
-                  className="w-full py-2 bg-rose-50 text-rose-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-2"
+                  onClick={() => { logout(); setMobileMenuOpen(false); }}
+                  className="w-full py-2 bg-slate-100 text-slate-700 font-medium rounded-lg"
                 >
-                  <LogOut className="w-4 h-4" />
-                  <span>Cerrar Sesión</span>
+                  Cerrar Sesión
                 </button>
               </>
             ) : (
-              <>
+              <div className="grid grid-cols-2 gap-2 pt-1 font-medium">
                 <button
                   onClick={() => openAuth('student')}
-                  className="w-full py-2.5 rounded-xl border border-blue-600 text-blue-700 font-semibold text-xs flex items-center justify-center gap-2"
+                  className="py-2 px-2.5 bg-slate-100 text-slate-800 rounded-lg text-left"
                 >
-                  <GraduationCap className="w-4 h-4 text-blue-600" />
-                  <span>Acceso Estudiante</span>
+                  🎓 Estudiante
+                </button>
+                <button
+                  onClick={() => openAuth('representative')}
+                  className="py-2 px-2.5 bg-slate-100 text-slate-800 rounded-lg text-left"
+                >
+                  👨‍👩‍👦 Representante
                 </button>
                 <button
                   onClick={() => openAuth('teacher')}
-                  className="w-full py-2.5 rounded-xl bg-blue-700 text-white font-semibold text-xs flex items-center justify-center gap-2"
+                  className="py-2 px-2.5 bg-slate-100 text-slate-800 rounded-lg text-left"
                 >
-                  <School className="w-4 h-4 text-white" />
-                  <span>Acceso Profesor / Admin</span>
+                  👨‍🏫 Docente
                 </button>
-                <div className="grid grid-cols-2 gap-2 pt-2">
-                  <button
-                    onClick={() => {
-                      loginAsDemoStudent();
-                      setMobileMenuOpen(false);
-                    }}
-                    className="py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-medium"
-                  >
-                    Demo Estudiante
-                  </button>
-                  <button
-                    onClick={() => {
-                      loginAsDemoTeacher();
-                      setMobileMenuOpen(false);
-                    }}
-                    className="py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-medium"
-                  >
-                    Demo Profesor
-                  </button>
-                </div>
-              </>
+                <button
+                  onClick={() => openAuth('admin')}
+                  className="py-2 px-2.5 bg-slate-900 text-white rounded-lg text-left"
+                >
+                  🛡️ Administración
+                </button>
+              </div>
             )}
           </div>
         </div>

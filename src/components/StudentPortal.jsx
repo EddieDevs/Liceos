@@ -1,25 +1,21 @@
 import React, { useState } from 'react';
 import {
-  GraduationCap,
   BookOpen,
   Calendar,
   Award,
-  CheckCircle2,
   Clock,
-  AlertCircle,
   FileText,
   Printer,
   ChevronRight,
-  TrendingUp,
-  Download,
-  Info,
   Camera,
+  PlusCircle,
   Phone,
   Mail,
   User,
   ShieldCheck,
-  Search,
-  ExternalLink
+  Upload,
+  Heart,
+  Tag
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import CertificateModal from './CertificateModal';
@@ -34,27 +30,37 @@ export default function StudentPortal() {
     attendances,
     certificates,
     memories,
+    addMemory,
     institution,
     subjects,
-    setActiveTab
+    setActiveTab,
+    notify
   } = useApp();
 
   const [activeSubTab, setActiveSubTab] = useState('grades'); // 'grades', 'schedule', 'plans', 'certificates', 'attendance', 'memories', 'directory'
   const [selectedTerm, setSelectedTerm] = useState('1er Lapso');
   const [selectedCertificate, setSelectedCertificate] = useState(null);
-  const [subjectFilter, setSubjectFilter] = useState('all');
 
-  // Find student details or default to first student
+  // Student memories upload modal
+  const [memoryModalOpen, setMemoryModalOpen] = useState(false);
+  const [memoryForm, setMemoryForm] = useState({
+    title: '',
+    category: 'Proyectos',
+    gradeYear: '4to Año',
+    image: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=80',
+    description: ''
+  });
+
+  // Current student profile
   const student =
     students.find((s) => s.id === currentUser?.id || s.email === currentUser?.email) ||
     students[0];
 
-  // Filter grades for this student
+  // Grades
   const studentGrades = grades.filter(
     (g) => g.studentId === student.id || g.studentName === student.name
   );
 
-  // Group grades by subject to compute average per subject
   const subjectAverages = subjects.map((sub) => {
     const list = studentGrades.filter(
       (g) => g.subjectId === sub.id || g.subjectName === sub.name
@@ -68,7 +74,6 @@ export default function StudentPortal() {
     };
   });
 
-  // Calculate real general average
   const validAverages = subjectAverages
     .map((s) => parseFloat(s.average))
     .filter((a) => !isNaN(a));
@@ -77,92 +82,95 @@ export default function StudentPortal() {
       ? (validAverages.reduce((a, b) => a + b, 0) / validAverages.length).toFixed(1)
       : student.overallAverage;
 
-  // Filter student certificates
+  // Certificates
   const studentCerts = certificates.filter(
     (c) => c.studentId === student.id || c.studentName === student.name
   );
 
-  // Filter student attendances
+  // Attendances
   const studentAtts = attendances.filter(
     (a) => a.studentId === student.id || a.studentName === student.name
   );
 
+  const handleSaveMemory = (e) => {
+    e.preventDefault();
+    addMemory({
+      ...memoryForm,
+      authorName: student.name,
+      gradeYear: student.gradeLevel.split('-')[0].trim() || '4to Año',
+    });
+    setMemoryModalOpen(false);
+    setMemoryForm({
+      title: '',
+      category: 'Proyectos',
+      gradeYear: '4to Año',
+      image: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=80',
+      description: ''
+    });
+  };
+
   const daysOfWeek = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 
   return (
-    <div className="min-h-screen bg-slate-100/70 pb-20">
+    <div className="min-h-screen bg-slate-50 pb-20">
       {/* 1. Header Banner */}
-      <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-blue-950 text-white pt-8 pb-16 px-4 sm:px-6 lg:px-8">
+      <div className="bg-slate-900 text-white pt-8 pb-14 px-4 sm:px-6 lg:px-8 border-b border-slate-800">
         <div className="max-w-7xl mx-auto">
-          {/* Breadcrumbs */}
-          <div className="flex items-center gap-2 text-xs text-blue-200 mb-4">
-            <button onClick={() => setActiveTab('home')} className="hover:text-white">
+          <div className="flex items-center gap-2 text-xs text-slate-400 mb-4">
+            <button onClick={() => setActiveTab('home')} className="hover:text-white transition">
               Inicio
             </button>
             <ChevronRight className="w-3 h-3" />
-            <span className="text-white font-semibold">Portal del Estudiante</span>
+            <span className="text-white font-medium">Portal del Estudiante</span>
           </div>
 
-          {/* Student Profile Overview */}
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 bg-white/10 p-6 rounded-3xl border border-white/15 backdrop-blur-md">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 bg-slate-800/80 p-6 rounded-2xl border border-slate-700/70">
             <div className="flex items-center gap-4">
               <img
                 src={student.avatar}
                 alt={student.name}
-                className="w-20 h-20 rounded-2xl object-cover border-2 border-white/40 shadow-lg"
+                className="w-16 h-16 rounded-xl object-cover border border-slate-600"
               />
               <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="px-2.5 py-0.5 rounded-full bg-blue-500/30 text-blue-200 text-xs font-semibold border border-blue-400/30">
-                    Estudiante Regular
-                  </span>
-                  <span className="text-xs text-slate-300 font-mono">
-                    {student.studentIdNumber || 'V-31.452.981'}
-                  </span>
-                </div>
-                <h1 className="text-2xl sm:text-3xl font-extrabold font-heading text-white">
-                  {student.name}
-                </h1>
-                <p className="text-xs sm:text-sm text-blue-200 mt-0.5">
-                  {student.gradeLevel || '4to Año - Sección A'} • Año Escolar 2024-2025
+                <span className="px-2.5 py-0.5 rounded-md bg-blue-500/20 text-blue-300 text-[11px] font-semibold border border-blue-400/20 inline-block mb-1">
+                  Estudiante Regular
+                </span>
+                <h1 className="text-2xl font-bold font-heading text-white">{student.name}</h1>
+                <p className="text-xs text-slate-300">
+                  {student.studentIdNumber} • {student.gradeLevel} • {institution.name}
                 </p>
               </div>
             </div>
 
-            {/* Quick Metrics */}
-            <div className="grid grid-cols-3 gap-3 w-full md:w-auto text-center">
-              <div className="bg-white/10 px-4 py-3 rounded-2xl border border-white/10">
-                <div className="text-xl sm:text-2xl font-black text-amber-300 font-heading">
-                  {generalAvg}
-                </div>
-                <div className="text-[10px] text-blue-200 uppercase font-semibold">Promedio</div>
+            <div className="grid grid-cols-3 gap-2.5 text-center">
+              <div className="bg-slate-900/80 px-3.5 py-2.5 rounded-xl border border-slate-700">
+                <div className="text-lg font-bold text-white font-heading">{generalAvg}</div>
+                <div className="text-[10px] text-slate-400 uppercase">Promedio</div>
               </div>
-              <div className="bg-white/10 px-4 py-3 rounded-2xl border border-white/10">
-                <div className="text-xl sm:text-2xl font-black text-emerald-300 font-heading">
+              <div className="bg-slate-900/80 px-3.5 py-2.5 rounded-xl border border-slate-700">
+                <div className="text-lg font-bold text-emerald-400 font-heading">
                   {student.attendanceRate}%
                 </div>
-                <div className="text-[10px] text-blue-200 uppercase font-semibold">Asistencia</div>
+                <div className="text-[10px] text-slate-400 uppercase">Asistencia</div>
               </div>
-              <div className="bg-white/10 px-4 py-3 rounded-2xl border border-white/10">
-                <div className="text-xl sm:text-2xl font-black text-purple-300 font-heading">
+              <div className="bg-slate-900/80 px-3.5 py-2.5 rounded-xl border border-slate-700">
+                <div className="text-lg font-bold text-amber-400 font-heading">
                   {studentCerts.length}
                 </div>
-                <div className="text-[10px] text-blue-200 uppercase font-semibold">Menciones</div>
+                <div className="text-[10px] text-slate-400 uppercase">Menciones</div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 2. Navigation Tabs */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8">
-        <div className="bg-white rounded-2xl shadow-md border border-slate-200/80 p-1.5 flex flex-wrap gap-1 overflow-x-auto text-xs font-semibold">
+      {/* 2. Subtabs Bar */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6">
+        <div className="bg-white rounded-xl shadow-xs border border-slate-200 p-1 flex gap-1 overflow-x-auto text-xs font-semibold">
           <button
             onClick={() => setActiveSubTab('grades')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition shrink-0 ${
-              activeSubTab === 'grades'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
+              activeSubTab === 'grades' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
             <BookOpen className="w-4 h-4" />
@@ -171,10 +179,8 @@ export default function StudentPortal() {
 
           <button
             onClick={() => setActiveSubTab('schedule')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition shrink-0 ${
-              activeSubTab === 'schedule'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
+              activeSubTab === 'schedule' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
             <Calendar className="w-4 h-4" />
@@ -183,10 +189,8 @@ export default function StudentPortal() {
 
           <button
             onClick={() => setActiveSubTab('plans')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition shrink-0 ${
-              activeSubTab === 'plans'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
+              activeSubTab === 'plans' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
             <FileText className="w-4 h-4" />
@@ -195,22 +199,18 @@ export default function StudentPortal() {
 
           <button
             onClick={() => setActiveSubTab('certificates')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition shrink-0 ${
-              activeSubTab === 'certificates'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
+              activeSubTab === 'certificates' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
             <Award className="w-4 h-4" />
-            <span>Certificados y Menciones ({studentCerts.length})</span>
+            <span>Certificados y Menciones</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('attendance')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition shrink-0 ${
-              activeSubTab === 'attendance'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
+              activeSubTab === 'attendance' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
             <Clock className="w-4 h-4" />
@@ -219,22 +219,18 @@ export default function StudentPortal() {
 
           <button
             onClick={() => setActiveSubTab('memories')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition shrink-0 ${
-              activeSubTab === 'memories'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
+              activeSubTab === 'memories' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
             <Camera className="w-4 h-4" />
-            <span>Anuario & Recuerdos</span>
+            <span>Recuerdos de Mi Año</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('directory')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition shrink-0 ${
-              activeSubTab === 'directory'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
+              activeSubTab === 'directory' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
             <Phone className="w-4 h-4" />
@@ -243,19 +239,18 @@ export default function StudentPortal() {
         </div>
       </div>
 
-      {/* 3. Main Content Container */}
+      {/* 3. Main Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-        {/* SUBTAB: GRADES */}
+        {/* GRADES */}
         {activeSubTab === 'grades' && (
           <div className="space-y-6">
-            {/* Header with actions */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
               <div>
-                <h2 className="text-xl font-bold font-heading text-slate-900">
-                  Boletín de Calificaciones Académicas
+                <h2 className="text-base font-bold font-heading text-slate-900">
+                  Boletín Oficial de Calificaciones
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Consulta de notas parciales, acumuladas y observaciones de los docentes
+                  Calificaciones parciales y observaciones emitidas por los docentes
                 </p>
               </div>
 
@@ -263,16 +258,16 @@ export default function StudentPortal() {
                 <select
                   value={selectedTerm}
                   onChange={(e) => setSelectedTerm(e.target.value)}
-                  className="px-3.5 py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-3 py-2 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50"
                 >
-                  <option value="1er Lapso">1er Lapso Pedagógico</option>
-                  <option value="2do Lapso">2do Lapso Pedagógico</option>
-                  <option value="3er Lapso">3er Lapso Pedagógico</option>
+                  <option value="1er Lapso">1er Lapso</option>
+                  <option value="2do Lapso">2do Lapso</option>
+                  <option value="3er Lapso">3er Lapso</option>
                 </select>
 
                 <button
                   onClick={() => window.print()}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition"
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs rounded-lg flex items-center gap-1.5 transition"
                 >
                   <Printer className="w-4 h-4" />
                   <span>Imprimir Boletín</span>
@@ -280,68 +275,46 @@ export default function StudentPortal() {
               </div>
             </div>
 
-            {/* Subject Grade Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {subjectAverages.map((sub) => (
                 <div
                   key={sub.id}
-                  className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs hover:shadow-md transition flex flex-col justify-between"
+                  className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between"
                 >
                   <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <span
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: sub.color }}
-                      ></span>
-                      <span
-                        className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
-                          parseFloat(sub.average) >= 16
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : parseFloat(sub.average) >= 10
-                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                            : 'bg-amber-50 text-amber-700 border border-amber-200'
-                        }`}
-                      >
-                        Promedio: {sub.average} / 20
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-bold text-slate-900 text-sm">{sub.name}</span>
+                      <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-md">
+                        {sub.average} / 20
                       </span>
                     </div>
+                    <div className="text-[11px] text-slate-400 mb-3">{sub.teacher}</div>
 
-                    <h3 className="text-lg font-bold font-heading text-slate-900 mb-1">
-                      {sub.name}
-                    </h3>
-                    <p className="text-xs text-slate-500 mb-4">{sub.teacher}</p>
-
-                    {/* Evaluations list */}
                     <div className="space-y-2 border-t border-slate-100 pt-3">
                       {sub.grades.length === 0 ? (
                         <div className="text-xs text-slate-400 italic py-2 text-center">
-                          Aún no se han publicado notas de este lapso
+                          Aún sin notas registradas este lapso
                         </div>
                       ) : (
                         sub.grades.map((gr) => (
                           <div
                             key={gr.id}
-                            className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs"
+                            className="p-2.5 rounded-lg bg-slate-50 flex items-center justify-between text-xs"
                           >
                             <div>
-                              <div className="font-semibold text-slate-800">{gr.evaluationTitle}</div>
-                              <div className="text-[10px] text-slate-400">
-                                Ponderación: {gr.percentage}% • {gr.date}
-                              </div>
+                              <div className="font-medium text-slate-800">{gr.evaluationTitle}</div>
+                              <div className="text-[10px] text-slate-400">{gr.percentage}% • {gr.date}</div>
                             </div>
-                            <div className="text-right">
-                              <span className="font-bold text-sm text-blue-700">{gr.score}</span>
-                              <span className="text-[10px] text-slate-400"> / {gr.maxScore}</span>
-                            </div>
+                            <span className="font-bold text-blue-700">{gr.score}</span>
                           </div>
                         ))
                       )}
                     </div>
                   </div>
 
-                  {sub.grades.length > 0 && sub.grades[0].comments && (
-                    <div className="mt-4 pt-3 border-t border-dashed border-slate-200 text-[11px] text-slate-500 italic">
-                      "Observación docente: {sub.grades[0].comments}"
+                  {sub.grades[0]?.comments && (
+                    <div className="mt-3 pt-2 border-t border-slate-100 text-[11px] text-slate-500 italic">
+                      "{sub.grades[0].comments}"
                     </div>
                   )}
                 </div>
@@ -350,54 +323,39 @@ export default function StudentPortal() {
           </div>
         )}
 
-        {/* SUBTAB: SCHEDULE */}
+        {/* SCHEDULE */}
         {activeSubTab === 'schedule' && (
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-bold font-heading text-slate-900">
-                  Horario Semanal de Clases
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Sección 4to Año "A" • Turno Matutino (7:00 AM a 1:00 PM)
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 text-xs">
-                <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-700 font-semibold border border-blue-200">
-                  Sede Central: Aula 204
-                </span>
-              </div>
+          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-6">
+            <div>
+              <h2 className="text-base font-bold font-heading text-slate-900">
+                Horario Semanal de Clases
+              </h2>
+              <p className="text-xs text-slate-500">
+                {student.gradeLevel} • Turno Matutino • Sede Colinas del Neverí
+              </p>
             </div>
 
-            {/* Weekly Schedule Days Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
               {daysOfWeek.map((day) => {
                 const daySchedules = schedules.filter((s) => s.day === day);
                 return (
-                  <div key={day} className="rounded-2xl border border-slate-200 overflow-hidden bg-slate-50/50">
-                    <div className="bg-slate-900 text-white font-heading font-bold text-sm py-2.5 text-center">
+                  <div key={day} className="rounded-xl border border-slate-200 overflow-hidden bg-slate-50/50">
+                    <div className="bg-slate-900 text-white font-medium text-xs py-2 text-center">
                       {day}
                     </div>
                     <div className="p-2 space-y-2">
                       {daySchedules.length === 0 ? (
-                        <div className="text-xs text-slate-400 py-6 text-center italic">
-                          Sin actividades
-                        </div>
+                        <div className="text-xs text-slate-400 py-4 text-center italic">Libre</div>
                       ) : (
                         daySchedules.map((item, idx) => (
-                          <div
-                            key={idx}
-                            className={`p-3 rounded-xl border text-xs shadow-2xs ${item.color}`}
-                          >
-                            <div className="font-bold text-sm leading-tight mb-1">{item.subject}</div>
-                            <div className="text-[11px] flex items-center gap-1 opacity-80">
-                              <Clock className="w-3 h-3" />
+                          <div key={idx} className="p-2.5 rounded-lg border border-slate-200 bg-white text-xs">
+                            <div className="font-bold text-slate-900 mb-0.5">{item.subject}</div>
+                            <div className="text-[11px] text-slate-500 flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-slate-400" />
                               <span>{item.time}</span>
                             </div>
-                            <div className="text-[10px] mt-1.5 pt-1 border-t border-current/20 flex items-center justify-between">
-                              <span className="font-semibold">{item.classroom}</span>
-                              <span className="truncate max-w-[80px]">{item.teacher.split(' ')[1]}</span>
+                            <div className="text-[10px] text-blue-700 font-medium mt-1">
+                              {item.classroom}
                             </div>
                           </div>
                         ))
@@ -410,71 +368,31 @@ export default function StudentPortal() {
           </div>
         )}
 
-        {/* SUBTAB: EVALUATION PLANS */}
+        {/* PLANS */}
         {activeSubTab === 'plans' && (
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-bold font-heading text-slate-900">
-                  Planes de Evaluación y Cronograma
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Fechas de talleres, pruebas, proyectos y defensas programadas para el período
-                </p>
-              </div>
-
-              <div className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 border border-blue-200">
-                Total de Evaluaciones: {evaluationPlans.length}
-              </div>
-            </div>
-
-            {/* Plans List Table */}
+          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4">
+            <h2 className="text-base font-bold font-heading text-slate-900">
+              Planes de Evaluación y Fechas de Entrega
+            </h2>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-slate-200 text-slate-400 uppercase tracking-wider">
-                    <th className="py-3 px-4">Asignatura</th>
-                    <th className="py-3 px-4">Actividad / Título</th>
-                    <th className="py-3 px-4">Modalidad</th>
-                    <th className="py-3 px-4">Fecha Límite</th>
-                    <th className="py-3 px-4 text-center">Ponderación</th>
-                    <th className="py-3 px-4 text-center">Estado</th>
+                    <th className="py-3 px-3">Materia</th>
+                    <th className="py-3 px-3">Evaluación</th>
+                    <th className="py-3 px-3">Modalidad</th>
+                    <th className="py-3 px-3">Fecha</th>
+                    <th className="py-3 px-3 text-center">Ponderación</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {evaluationPlans.map((plan) => (
-                    <tr key={plan.id} className="hover:bg-slate-50 transition">
-                      <td className="py-3.5 px-4 font-bold text-slate-900">{plan.subjectName}</td>
-                      <td className="py-3.5 px-4">
-                        <div className="font-semibold text-slate-800">{plan.title}</div>
-                        <div className="text-[11px] text-slate-500 max-w-sm line-clamp-1">
-                          {plan.description}
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-600">
-                        <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
-                          {plan.type}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 font-mono font-medium text-slate-700">
-                        {plan.dueDate}
-                      </td>
-                      <td className="py-3.5 px-4 text-center font-bold text-blue-600">
-                        {plan.percentage}%
-                      </td>
-                      <td className="py-3.5 px-4 text-center">
-                        <span
-                          className={`px-2.5 py-1 rounded-full text-[10px] font-semibold ${
-                            plan.status === 'Completado'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : plan.status === 'En Progreso'
-                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                              : 'bg-amber-50 text-amber-700 border border-amber-200'
-                          }`}
-                        >
-                          {plan.status}
-                        </span>
-                      </td>
+                  {evaluationPlans.map((p) => (
+                    <tr key={p.id} className="hover:bg-slate-50">
+                      <td className="py-3 px-3 font-bold text-slate-900">{p.subjectName}</td>
+                      <td className="py-3 px-3 text-slate-800 font-medium">{p.title}</td>
+                      <td className="py-3 px-3 text-slate-500">{p.type}</td>
+                      <td className="py-3 px-3 font-mono text-slate-600">{p.dueDate}</td>
+                      <td className="py-3 px-3 text-center font-bold text-blue-700">{p.percentage}%</td>
                     </tr>
                   ))}
                 </tbody>
@@ -483,189 +401,120 @@ export default function StudentPortal() {
           </div>
         )}
 
-        {/* SUBTAB: CERTIFICATES & RECOGNITIONS */}
+        {/* CERTIFICATES */}
         {activeSubTab === 'certificates' && (
-          <div className="space-y-6">
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-4">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold font-heading text-slate-900">
-                  Cuadro de Honor y Certificados Oficiales
+                <h2 className="text-base font-bold font-heading text-slate-900">
+                  Certificados y Menciones Oficiales
                 </h2>
-                <p className="text-xs text-slate-500">
-                  Reconocimientos académicos, diplomas de excelencia y menciones otorgadas
-                </p>
+                <p className="text-xs text-slate-500">Reconocimientos avalados por la Dirección General</p>
               </div>
-
-              <div className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1.5">
-                <Award className="w-4 h-4 text-amber-600" />
-                <span>{studentCerts.length} Diplomas Obtenidos</span>
-              </div>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-amber-50 text-amber-800">
+                {studentCerts.length} Diplomas
+              </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {studentCerts.map((cert) => (
                 <div
                   key={cert.id}
-                  className="bg-white rounded-3xl p-6 border-2 border-amber-200/80 shadow-md relative overflow-hidden flex flex-col justify-between"
+                  className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between"
                 >
-                  <div className="absolute top-0 right-0 w-28 h-28 bg-gradient-to-br from-amber-200/30 to-yellow-300/10 rounded-bl-full pointer-events-none"></div>
-
                   <div>
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-700 shadow-sm border border-amber-200">
-                        <Award className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                          {cert.typeLabel}
-                        </span>
-                        <h3 className="font-bold text-slate-900 text-base font-heading mt-0.5">
-                          {cert.title}
-                        </h3>
-                      </div>
-                    </div>
-
-                    <p className="text-xs text-slate-600 leading-relaxed mb-4">
-                      {cert.description}
-                    </p>
-
-                    <div className="flex items-center justify-between text-[11px] text-slate-400 pt-3 border-t border-slate-100">
-                      <span>Expedido: {cert.issueDate}</span>
-                      <span className="font-mono text-slate-600 font-semibold">{cert.code}</span>
-                    </div>
+                    <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md">
+                      {cert.typeLabel}
+                    </span>
+                    <h3 className="font-bold text-slate-900 text-sm font-heading mt-2 mb-1">{cert.title}</h3>
+                    <p className="text-xs text-slate-600 mb-3">{cert.description}</p>
+                    <div className="text-[11px] text-slate-400">{cert.issueDate} • Cód: {cert.code}</div>
                   </div>
 
-                  <div className="mt-6 pt-4 border-t border-slate-100 flex items-center gap-3">
-                    <button
-                      onClick={() => setSelectedCertificate(cert)}
-                      className="flex-1 py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-2"
-                    >
-                      <FileText className="w-4 h-4" />
-                      <span>Ver Diploma Oficial Imprimible</span>
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => setSelectedCertificate(cert)}
+                    className="mt-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium rounded-lg transition"
+                  >
+                    Ver Diploma Oficial
+                  </button>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* SUBTAB: ATTENDANCE & ABSENCES */}
+        {/* ATTENDANCE */}
         {activeSubTab === 'attendance' && (
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-bold font-heading text-slate-900">
-                  Control de Asistencias y Faltas
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Registro diario de puntualidad y notificaciones enviadas a los representantes
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  Índice de Asistencia: {student.attendanceRate}%
-                </span>
-              </div>
-            </div>
-
-            {/* Attendance Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                <div className="text-xs text-slate-500">Clases Impartidas</div>
-                <div className="text-2xl font-bold text-slate-900 font-heading">68 Horas</div>
-              </div>
-              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200">
-                <div className="text-xs text-amber-700 font-medium">Inasistencias Justificadas</div>
-                <div className="text-2xl font-bold text-amber-900 font-heading">1 Falta</div>
-              </div>
-              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200">
-                <div className="text-xs text-emerald-700 font-medium">Conducta y Puntualidad</div>
-                <div className="text-2xl font-bold text-emerald-900 font-heading">Excelente</div>
-              </div>
-            </div>
-
-            {/* Inasistencias Log Table */}
-            <div className="mt-6">
-              <h3 className="text-sm font-bold text-slate-900 mb-3">Historial de Notificaciones de Falta</h3>
+          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4">
+            <h2 className="text-base font-bold font-heading text-slate-900">
+              Registro de Inasistencias y Notificaciones
+            </h2>
+            <div className="space-y-3">
               {studentAtts.length === 0 ? (
-                <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 text-center text-xs text-slate-400">
-                  No posees inasistencias registradas. ¡Felicitaciones por tu asistencia constante!
+                <div className="p-6 text-center text-xs text-slate-400 italic">
+                  Asistencia perfecta registrada hasta la fecha.
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {studentAtts.map((att) => (
-                    <div
-                      key={att.id}
-                      className="p-4 rounded-2xl border border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 font-bold">
-                          {att.status === 'justified' ? 'J' : att.status === 'late' ? 'T' : 'F'}
-                        </div>
-                        <div>
-                          <div className="font-bold text-slate-800 text-sm">
-                            {att.subject} • <span className="font-normal text-slate-500">{att.date}</span>
-                          </div>
-                          <div className="text-slate-600 mt-0.5">{att.notes}</div>
-                        </div>
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800 inline-block mb-1">
-                          {att.statusLabel}
-                        </span>
-                        <div className="text-[10px] text-slate-400">
-                          {att.notified ? 'Aviso enviado al representante' : 'Pendiente'}
-                        </div>
-                      </div>
+                studentAtts.map((att) => (
+                  <div
+                    key={att.id}
+                    className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between text-xs"
+                  >
+                    <div>
+                      <div className="font-bold text-slate-900">{att.subject} • {att.date}</div>
+                      <div className="text-slate-600">{att.notes}</div>
                     </div>
-                  ))}
-                </div>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800">
+                      {att.statusLabel}
+                    </span>
+                  </div>
+                ))
               )}
             </div>
           </div>
         )}
 
-        {/* SUBTAB: MEMORIES & YEARBOOK */}
+        {/* RECUERDOS DE MI AÑO (STUDENT MEMORIES CONTRIBUTION) */}
         {activeSubTab === 'memories' && (
           <div className="space-y-6">
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-xl font-bold font-heading text-slate-900">
-                  Anuario Escolar & Recuerdos de Nuestra Promoción
+                <h2 className="text-base font-bold font-heading text-slate-900">
+                  Recuerdos y Anuario de Nuestro Año Escolar
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Galería de eventos, proyectos científicos, victorias deportivas y vida estudiantil
+                  Sube fotos y momentos compartidos con tus compañeros de clase
                 </p>
               </div>
+
+              <button
+                onClick={() => setMemoryModalOpen(true)}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs rounded-lg transition flex items-center gap-1.5"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>Agregar Recuerdo a Mi Año</span>
+              </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {memories.map((mem) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {memories.map((m) => (
                 <div
-                  key={mem.id}
-                  className="bg-white rounded-3xl overflow-hidden border border-slate-200 shadow-xs hover:shadow-lg transition group"
+                  key={m.id}
+                  className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-xs hover:shadow-md transition text-xs"
                 >
-                  <div className="h-48 overflow-hidden relative">
-                    <img
-                      src={mem.image}
-                      alt={mem.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                    />
-                    <div className="absolute top-3 left-3">
-                      <span className="px-2.5 py-1 rounded-full bg-slate-900/80 backdrop-blur text-white text-[10px] font-semibold">
-                        {mem.category}
-                      </span>
-                    </div>
+                  <div className="h-44 overflow-hidden relative">
+                    <img src={m.image} alt={m.title} className="w-full h-full object-cover" />
+                    <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-slate-900/80 text-white text-[10px] font-medium backdrop-blur-xs">
+                      {m.gradeYear || '4to Año'} • {m.category}
+                    </span>
                   </div>
-                  <div className="p-5">
-                    <div className="text-[10px] text-slate-400 font-medium mb-1">{mem.date}</div>
-                    <h3 className="font-bold text-slate-900 text-base mb-2 group-hover:text-blue-600 transition">
-                      {mem.title}
-                    </h3>
-                    <p className="text-xs text-slate-600 leading-relaxed">{mem.description}</p>
+                  <div className="p-4">
+                    <div className="font-bold text-slate-900 text-sm mb-1">{m.title}</div>
+                    <p className="text-slate-600 leading-relaxed mb-3">{m.description}</p>
+                    <div className="text-[10px] text-slate-400 pt-2 border-t border-slate-100 flex items-center justify-between">
+                      <span>Publicado por: {m.authorName || 'Estudiante'}</span>
+                      <span>{m.date}</span>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -673,40 +522,21 @@ export default function StudentPortal() {
           </div>
         )}
 
-        {/* SUBTAB: DIRECTORY & CONTACTS */}
+        {/* DIRECTORY */}
         {activeSubTab === 'directory' && (
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6">
-            <div>
-              <h2 className="text-xl font-bold font-heading text-slate-900">
-                Directorio Docente y Contacto Institucional
-              </h2>
-              <p className="text-xs text-slate-500">
-                Canales de comunicación oficiales para asesorías y dudas pedagógicas
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {subjects.map((sub) => (
-                <div
-                  key={sub.id}
-                  className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold"
-                      style={{ backgroundColor: sub.color }}
-                    >
-                      {sub.name.charAt(0)}
-                    </div>
-                    <div>
-                      <div className="font-bold text-slate-900 text-sm">{sub.teacher}</div>
-                      <div className="text-xs text-slate-500">{sub.name}</div>
-                    </div>
+          <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4">
+            <h2 className="text-base font-bold font-heading text-slate-900">Directorio Docente</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              {subjects.map((s) => (
+                <div key={s.id} className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between">
+                  <div>
+                    <div className="font-bold text-slate-900">{s.teacher}</div>
+                    <div className="text-slate-500">{s.name}</div>
                   </div>
                   <a
                     href={`mailto:${institution.email}`}
-                    className="p-2 rounded-xl bg-white border border-slate-200 text-blue-600 hover:bg-blue-50 transition"
-                    title="Enviar mensaje"
+                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+                    title="Contacto"
                   >
                     <Mail className="w-4 h-4" />
                   </a>
@@ -717,7 +547,96 @@ export default function StudentPortal() {
         )}
       </div>
 
-      {/* Diploma Modal Viewer */}
+      {/* Add Memory Modal */}
+      {memoryModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md p-6">
+            <h3 className="text-base font-bold text-slate-900 font-heading mb-4">
+              Agregar Recuerdo al Anuario
+            </h3>
+            <form onSubmit={handleSaveMemory} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-medium text-slate-700 mb-1">Título del Recuerdo</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. Feria de Ciencias en Colinas del Neverí"
+                  value={memoryForm.title}
+                  onChange={(e) => setMemoryForm({ ...memoryForm, title: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-medium text-slate-700 mb-1">Año / Curso</label>
+                  <input
+                    type="text"
+                    value={student.gradeLevel.split('-')[0].trim()}
+                    disabled
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-100 text-slate-600"
+                  />
+                </div>
+                <div>
+                  <label className="block font-medium text-slate-700 mb-1">Categoría</label>
+                  <select
+                    value={memoryForm.category}
+                    onChange={(e) => setMemoryForm({ ...memoryForm, category: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
+                  >
+                    <option value="Proyectos">Proyectos y Feria</option>
+                    <option value="Deportes">Deportes y Juegos</option>
+                    <option value="Eventos">Eventos y Aniversario</option>
+                    <option value="Aulas">Vida en el Aula</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-medium text-slate-700 mb-1">Enlace de la Foto / Imagen</label>
+                <input
+                  type="url"
+                  required
+                  placeholder="https://..."
+                  value={memoryForm.image}
+                  onChange={(e) => setMemoryForm({ ...memoryForm, image: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200"
+                />
+              </div>
+
+              <div>
+                <label className="block font-medium text-slate-700 mb-1">Descripción / Anécdota</label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="Comparte qué sucedió en esta actividad..."
+                  value={memoryForm.description}
+                  onChange={(e) => setMemoryForm({ ...memoryForm, description: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200"
+                ></textarea>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setMemoryModalOpen(false)}
+                  className="px-3 py-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg"
+                >
+                  Publicar Recuerdo
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Diploma Viewer */}
       <CertificateModal
         certificate={selectedCertificate}
         onClose={() => setSelectedCertificate(null)}
