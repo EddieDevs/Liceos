@@ -80,11 +80,17 @@ export default function AdminPortal() {
     grades,
     announcements,
     addAnnouncement,
+    admissionRequests = [],
+    updateAdmissionStatus,
+    deleteAdmissionRequest,
     notify
   } = useApp();
 
-  const [activeSubTab, setActiveSubTab] = useState('students'); // 'students', 'sections', 'teachers', 'subjects', 'schedules', 'certificates', 'payments', 'classrooms', 'settings'
+  const [activeSubTab, setActiveSubTab] = useState('students'); // 'students', 'sections', 'teachers', 'subjects', 'schedules', 'certificates', 'payments', 'classrooms', 'settings', 'admissions'
   const [paymentFilter, setPaymentFilter] = useState('all');
+  const [admissionFilter, setAdmissionFilter] = useState('all');
+  const [admissionGradeFilter, setAdmissionGradeFilter] = useState('all');
+  const [admissionSearch, setAdmissionSearch] = useState('');
 
   // Preview modals
   const [previewCert, setPreviewCert] = useState(null);
@@ -445,6 +451,7 @@ export default function AdminPortal() {
         <div className="flex flex-wrap gap-2 border-b border-slate-700/60 pb-3 text-xs font-medium">
           {[
             { id: 'students', label: `Nómina Estudiantes (${students.length})`, icon: GraduationCap },
+            { id: 'admissions', label: `Solicitudes de Cupo (${admissionRequests.length})`, icon: Mail },
             { id: 'sections', label: `Secciones (${sections.length})`, icon: Layers },
             { id: 'teachers', label: `Docentes (${teachersList.length})`, icon: Users },
             { id: 'subjects', label: `Asignaturas (${subjects.length})`, icon: BookOpen },
@@ -619,6 +626,244 @@ export default function AdminPortal() {
                   </table>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* PESTAÑA: SOLICITUDES DE CUPO / ADMISIONES (Requisito 1)       */}
+        {/* ============================================================== */}
+        {activeSubTab === 'admissions' && (
+          <div className="space-y-6 animate-fade-in">
+            <div className="denim-card p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-base font-bold font-slab text-white flex items-center gap-2">
+                  <Mail className="w-5 h-5 text-[#DCB35C]" />
+                  <span>Bandeja de Solicitudes de Cupo (Admisiones)</span>
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Gestiona las postulaciones enviadas por los representantes desde la página web (Año Escolar {activeYear})
+                </p>
+              </div>
+
+              {/* Status and Search Filters */}
+              <div className="flex flex-wrap items-center gap-2.5">
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    value={admissionSearch}
+                    onChange={(e) => setAdmissionSearch(e.target.value)}
+                    placeholder="Buscar por representante, teléfono o correo..."
+                    className="pl-8 pr-3 py-1.5 text-xs rounded-xl bg-[#101c30] border border-slate-700 text-white placeholder-slate-500 focus:border-[#DCB35C] w-64"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Sub-Filters: Status & Grade */}
+            <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { id: 'all', label: 'Todas las Solicitudes' },
+                  { id: 'pendiente', label: 'Pendientes' },
+                  { id: 'contactado', label: 'Contactados' },
+                  { id: 'aprobado', label: 'Aprobados' },
+                  { id: 'rechazado', label: 'Rechazados' }
+                ].map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => setAdmissionFilter(f.id)}
+                    className={`px-3 py-1.5 rounded-lg font-slab font-semibold transition cursor-pointer ${
+                      admissionFilter === f.id
+                        ? 'bg-[#223C63] text-white border border-[#DCB35C]/50 shadow-xs'
+                        : 'bg-[#152338] text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400 text-xs">Año:</span>
+                <select
+                  value={admissionGradeFilter}
+                  onChange={(e) => setAdmissionGradeFilter(e.target.value)}
+                  className="px-2.5 py-1.5 rounded-lg bg-[#152338] border border-slate-700 text-white text-xs focus:border-[#DCB35C]"
+                >
+                  <option value="all">Todos los Años</option>
+                  <option value="1er Año">1er Año</option>
+                  <option value="2do Año">2do Año</option>
+                  <option value="3er Año">3er Año</option>
+                  <option value="4to Año">4to Año</option>
+                  <option value="5to Año">5to Año</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Solicitudes Table */}
+            <div className="denim-card overflow-hidden">
+              {(() => {
+                const filtered = admissionRequests.filter((r) => {
+                  const matchStatus = admissionFilter === 'all' || r.status === admissionFilter;
+                  const matchGrade = admissionGradeFilter === 'all' || r.student_grade === admissionGradeFilter;
+                  const query = admissionSearch.toLowerCase().trim();
+                  const matchSearch =
+                    !query ||
+                    r.parent_name?.toLowerCase().includes(query) ||
+                    r.phone?.toLowerCase().includes(query) ||
+                    r.email?.toLowerCase().includes(query) ||
+                    r.message?.toLowerCase().includes(query);
+                  return matchStatus && matchGrade && matchSearch;
+                });
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="p-12 text-center text-xs text-slate-400">
+                      <Mail className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+                      <p className="font-bold text-slate-300 font-slab">No hay solicitudes de cupo que coincidan</p>
+                      <p className="mt-1 text-slate-500">
+                        {admissionRequests.length === 0
+                          ? 'Las solicitudes enviadas desde la sección de admisiones de la página web aparecerán aquí.'
+                          : 'Ajusta los filtros de búsqueda para visualizar otras solicitudes.'}
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-[#101c30] text-slate-400 uppercase tracking-wider text-[10px] border-b border-slate-700">
+                        <tr>
+                          <th className="py-3 px-4">Fecha</th>
+                          <th className="py-3 px-4">Representante & Contacto</th>
+                          <th className="py-3 px-4">Año Solicitado</th>
+                          <th className="py-3 px-4">Observaciones / Procedencia</th>
+                          <th className="py-3 px-4">Estado</th>
+                          <th className="py-3 px-4 text-right">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800">
+                        {filtered.map((req) => {
+                          const cleanPhone = req.phone ? req.phone.replace(/[^0-9]/g, '') : '';
+                          const waPhone = cleanPhone.startsWith('58') ? cleanPhone : `58${cleanPhone.replace(/^0+/, '')}`;
+                          const waText = encodeURIComponent(`Estimado(a) ${req.parent_name}, le saludamos de la Dirección de Admisiones de la U.E. Colegio Integral Venezuela referente a su solicitud de cupo para ${req.student_grade || 'Bachillerato'}.`);
+                          const waUrl = `https://wa.me/${waPhone}?text=${waText}`;
+
+                          return (
+                            <tr key={req.id} className="hover:bg-[#1A2B45]/40 transition">
+                              <td className="py-3 px-4 whitespace-nowrap text-slate-400 font-mono text-[11px]">
+                                {req.created_at ? new Date(req.created_at).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Reciente'}
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="font-bold text-white font-slab">{req.parent_name}</div>
+                                <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
+                                  <span>{req.phone}</span>
+                                  <span>•</span>
+                                  <span>{req.email}</span>
+                                </div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className="denim-patch px-2.5 py-0.5 text-[11px] font-semibold text-[#f0c36d]">
+                                  {req.student_grade || '1er Año'}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 max-w-xs">
+                                <p className="text-slate-300 text-[11px] line-clamp-2">
+                                  {req.message || <span className="text-slate-500 italic">Sin observaciones</span>}
+                                </p>
+                              </td>
+                              <td className="py-3 px-4">
+                                <select
+                                  value={req.status || 'pendiente'}
+                                  onChange={(e) => updateAdmissionStatus(req.id, e.target.value)}
+                                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition ${
+                                    req.status === 'aprobado'
+                                      ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50'
+                                      : req.status === 'contactado'
+                                      ? 'bg-blue-950/80 text-blue-300 border-blue-500/50'
+                                      : req.status === 'rechazado'
+                                      ? 'bg-rose-950/80 text-rose-300 border-rose-500/50'
+                                      : 'bg-amber-950/80 text-amber-300 border-amber-500/50'
+                                  }`}
+                                >
+                                  <option value="pendiente" className="bg-[#101c30] text-amber-300">Pendiente</option>
+                                  <option value="contactado" className="bg-[#101c30] text-blue-300">Contactado</option>
+                                  <option value="aprobado" className="bg-[#101c30] text-emerald-300">Aprobado</option>
+                                  <option value="rechazado" className="bg-[#101c30] text-rose-300">Rechazado</option>
+                                </select>
+                              </td>
+                              <td className="py-3 px-4 text-right">
+                                <div className="inline-flex items-center gap-1.5">
+                                  {/* WhatsApp link button */}
+                                  <a
+                                    href={waUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    title="Contactar vía WhatsApp"
+                                    className="p-1.5 rounded-lg bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 transition"
+                                  >
+                                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                                      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                                    </svg>
+                                  </a>
+
+                                  {/* Mailto button */}
+                                  <a
+                                    href={`mailto:${req.email}?subject=${encodeURIComponent(`Admisión U.E. Colegio Integral Venezuela - Año Escolar ${activeYear}`)}`}
+                                    title="Enviar correo institucional"
+                                    className="p-1.5 rounded-lg bg-[#223C63] hover:bg-[#1A2B45] border border-slate-700 text-slate-300 hover:text-white transition"
+                                  >
+                                    <Mail className="w-3.5 h-3.5" />
+                                  </a>
+
+                                  {/* Matricular Student directly */}
+                                  <button
+                                    onClick={() => {
+                                      setEnrollForm({
+                                        firstName: '',
+                                        lastName: '',
+                                        cedula: '',
+                                        gradeYear: req.student_grade || '1er Año',
+                                        sectionLetter: 'Sección A',
+                                        email: req.email || '',
+                                        password: 'estudiante123',
+                                        representativeName: req.parent_name || '',
+                                        phone: req.phone || ''
+                                      });
+                                      setEnrollModalOpen(true);
+                                    }}
+                                    title="Inscribir oficialmente como alumno"
+                                    className="px-2.5 py-1 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] hover:brightness-105 text-[#1A2B45] font-bold font-slab rounded-lg text-[11px] flex items-center gap-1 transition cursor-pointer"
+                                  >
+                                    <UserPlus className="w-3 h-3" />
+                                    <span>Matricular</span>
+                                  </button>
+
+                                  {/* Delete Request */}
+                                  <button
+                                    onClick={() => {
+                                      if (window.confirm(`¿Eliminar la solicitud de ${req.parent_name}?`)) {
+                                        deleteAdmissionRequest(req.id);
+                                      }
+                                    }}
+                                    title="Eliminar solicitud"
+                                    className="p-1.5 rounded-lg hover:bg-rose-950 text-slate-500 hover:text-rose-400 transition cursor-pointer"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}

@@ -116,8 +116,10 @@ export default function TeacherPortal() {
 
   // Plan Form State (Empty by default)
   const [planModalOpen, setPlanModalOpen] = useState(false);
+  const [planYearFilter, setPlanYearFilter] = useState('all');
   const [planFormData, setPlanFormData] = useState({
     subjectName: subjects[0]?.name || '',
+    grade_year: '1er Año',
     unit_title: '',
     strategy: 'Evaluación Escrita',
     instrument: 'Escala de Estimación',
@@ -398,8 +400,8 @@ export default function TeacherPortal() {
           <div className="denim-card p-6 space-y-4 animate-fade-in">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-700/60 pb-3">
               <div>
-                <h2 className="text-base font-bold font-slab text-white">Planes de Evaluación</h2>
-                <p className="text-xs text-slate-400">Cronograma de unidades, estrategias y porcentajes</p>
+                <h2 className="text-base font-bold font-slab text-white">Planes de Evaluación por Año</h2>
+                <p className="text-xs text-slate-400">Cronograma de unidades, estrategias y ponderaciones específicas por grado</p>
               </div>
               <button
                 onClick={() => setPlanModalOpen(true)}
@@ -410,28 +412,77 @@ export default function TeacherPortal() {
               </button>
             </div>
 
-            {evaluationPlans.length === 0 ? (
-              <div className="p-8 text-center rounded-2xl bg-[#101c30] border-stitch-subtle">
-                <Calendar className="w-8 h-8 text-slate-500 mx-auto mb-2" />
-                <div className="font-bold text-slate-300 font-slab">No hay planes de evaluación publicados</div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {evaluationPlans.map((p) => (
-                  <div key={p.id} className="p-4 rounded-xl bg-[#101c30] border border-slate-700 space-y-2 text-xs">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <span className="denim-patch px-2 py-0.5 text-[10px]">{p.subject_name || p.subjectName}</span>
-                        <h3 className="font-bold text-white text-sm font-slab mt-1">{p.unit_title || p.title}</h3>
-                      </div>
-                      <span className="font-mono font-bold text-[#f0c36d]">{p.percentage}%</span>
-                    </div>
-                    <div className="text-slate-400">Estrategia: {p.strategy || p.type}</div>
-                    <div className="text-slate-500 font-mono text-[11px]">Fecha: {p.evaluation_date || p.dueDate}</div>
+            {/* Filter by Year */}
+            <div className="flex flex-wrap gap-1.5 text-xs">
+              {['all', '1er Año', '2do Año', '3er Año', '4to Año', '5to Año'].map((yr) => (
+                <button
+                  key={yr}
+                  onClick={() => setPlanYearFilter(yr)}
+                  className={`px-3 py-1.5 rounded-lg font-slab font-semibold transition cursor-pointer ${
+                    planYearFilter === yr
+                      ? 'bg-[#223C63] text-white border border-[#DCB35C]/50 shadow-xs'
+                      : 'bg-[#152338] text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {yr === 'all' ? 'Todos los Años' : yr}
+                </button>
+              ))}
+            </div>
+
+            {(() => {
+              const filteredPlans = evaluationPlans.filter(
+                (p) => planYearFilter === 'all' || p.grade_year === planYearFilter || (!p.grade_year && planYearFilter === '1er Año')
+              );
+
+              if (filteredPlans.length === 0) {
+                return (
+                  <div className="p-8 text-center rounded-2xl bg-[#101c30] border-stitch-subtle">
+                    <Calendar className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+                    <div className="font-bold text-slate-300 font-slab">No hay planes de evaluación para este año</div>
+                    <p className="text-xs text-slate-500 mt-1">Usa el botón "Publicar Plan" para programar los objetivos de este nivel.</p>
                   </div>
-                ))}
-              </div>
-            )}
+                );
+              }
+
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {filteredPlans.map((p) => (
+                    <div key={p.id} className="p-4 rounded-xl bg-[#101c30] border border-slate-700 space-y-2 text-xs relative group">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="denim-patch px-2 py-0.5 text-[10px] font-bold text-[#f0c36d]">
+                              {p.grade_year || '1er Año'}
+                            </span>
+                            <span className="text-[11px] text-slate-300 font-semibold">
+                              {p.subject_name || p.subjectName}
+                            </span>
+                          </div>
+                          <h3 className="font-bold text-white text-sm font-slab mt-1.5">{p.unit_title || p.title}</h3>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-mono font-bold text-[#f0c36d] text-base">{p.percentage}%</span>
+                          <span className="text-[10px] text-slate-400 block font-mono">Lapso {p.lapso || 1}</span>
+                        </div>
+                      </div>
+                      <div className="text-slate-400 text-[11px] flex items-center justify-between pt-1 border-t border-slate-800">
+                        <span>Estrategia: <strong className="text-slate-200">{p.strategy || p.type}</strong></span>
+                        <span className="font-mono text-slate-400">Fecha: {p.evaluation_date || p.dueDate}</span>
+                      </div>
+                      <div className="flex justify-end pt-1">
+                        <button
+                          onClick={() => deleteEvaluationPlan(p.id)}
+                          className="text-[11px] text-rose-400 hover:text-rose-300 flex items-center gap-1 cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          <span>Retirar Plan</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -622,17 +673,63 @@ export default function TeacherPortal() {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-slate-300 mb-1 font-medium">Título de la Evaluación</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ej. Examen Parcial de Álgebra"
-                  value={gradeFormData.evaluationTitle}
-                  onChange={(e) => setGradeFormData({ ...gradeFormData, evaluationTitle: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
-                />
-              </div>
+              {/* Selector Interconectado con Plan de Evaluación (Requisito 5) */}
+              {(() => {
+                const targetStudent = students.find((s) => s.id === gradeFormData.studentId);
+                const targetYear = targetStudent?.grade_year || targetStudent?.gradeLevel || '1er Año';
+                const matchedPlans = evaluationPlans.filter((p) => {
+                  const matchSub = !gradeFormData.subjectName || p.subject_name === gradeFormData.subjectName || p.subjectName === gradeFormData.subjectName;
+                  const matchYr = !p.grade_year || p.grade_year === targetYear;
+                  return matchSub && matchYr;
+                });
+
+                return (
+                  <div>
+                    <label className="block text-slate-300 mb-1 font-medium">
+                      Evaluación Planificada ({targetYear})
+                    </label>
+                    {matchedPlans.length > 0 ? (
+                      <select
+                        required
+                        value={gradeFormData.evaluationTitle}
+                        onChange={(e) => {
+                          const chosen = matchedPlans.find(
+                            (p) => `${p.unit_title} - ${p.strategy}` === e.target.value || p.unit_title === e.target.value
+                          );
+                          setGradeFormData({
+                            ...gradeFormData,
+                            evaluationTitle: e.target.value,
+                            percentage: chosen?.percentage || gradeFormData.percentage,
+                            term: chosen?.lapso ? `${chosen.lapso}er Lapso` : gradeFormData.term
+                          });
+                        }}
+                        className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
+                      >
+                        <option value="">-- Seleccionar Evaluación del Plan --</option>
+                        {matchedPlans.map((p) => (
+                          <option key={p.id} value={`${p.unit_title} - ${p.strategy}`}>
+                            {p.unit_title} ({p.strategy} • {p.percentage}% • Lapso {p.lapso})
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="space-y-1">
+                        <input
+                          type="text"
+                          required
+                          placeholder="Ej. Examen Parcial / Taller Práctico"
+                          value={gradeFormData.evaluationTitle}
+                          onChange={(e) => setGradeFormData({ ...gradeFormData, evaluationTitle: e.target.value })}
+                          className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
+                        />
+                        <p className="text-[10px] text-amber-300/80">
+                          No hay evaluaciones en el plan para {targetYear} en {gradeFormData.subjectName || 'esta cátedra'}. Puedes ingresar el título o publicarlo en "Planes de Evaluación".
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -789,6 +886,23 @@ export default function TeacherPortal() {
                     <option value="Informática y Computación">Informática y Computación</option>
                     <option value="Orientación y Convivencia">Orientación y Convivencia</option>
                   </optgroup>
+                </select>
+              </div>
+
+              {/* Selector de Año Escolar para el Plan de Evaluación (Requisito 4) */}
+              <div>
+                <label className="block text-slate-300 mb-1 font-medium">Año de Bachillerato (Obligatorio)</label>
+                <select
+                  required
+                  value={planFormData.grade_year}
+                  onChange={(e) => setPlanFormData({ ...planFormData, grade_year: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
+                >
+                  <option value="1er Año">1er Año de Bachillerato</option>
+                  <option value="2do Año">2do Año de Bachillerato</option>
+                  <option value="3er Año">3er Año de Bachillerato</option>
+                  <option value="4to Año">4to Año de Bachillerato</option>
+                  <option value="5to Año">5to Año de Bachillerato</option>
                 </select>
               </div>
 

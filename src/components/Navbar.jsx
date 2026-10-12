@@ -66,11 +66,11 @@ export default function Navbar() {
             </span>
             <span className="flex items-center gap-1.5 text-slate-300">
               <Phone className="w-3.5 h-3.5 text-[#DCB35C]" />
-              <span>{institution.phone.split('/')[0]}</span>
+              <span>{institution.phone || '0416-6802168 / 0412-8637615'}</span>
             </span>
             <span className="flex items-center gap-1.5 text-slate-300">
               <Mail className="w-3.5 h-3.5 text-[#DCB35C]" />
-              <span>{institution.email}</span>
+              <span>{institution.email || 'integralvenezuela@gmail.com'}</span>
             </span>
           </div>
 
@@ -78,6 +78,9 @@ export default function Navbar() {
             <span className="denim-patch px-2.5 py-0.5 text-[10px] flex items-center gap-1.5">
               <Calendar className="w-3 h-3 text-[#DCB35C]" />
               <span>{institution.currentSchoolYear ? `Año Escolar ${institution.currentSchoolYear}` : 'Año Escolar 2027-2028'}</span>
+            </span>
+            <span className="denim-patch px-2.5 py-0.5 text-[10px] text-[#f0c36d] font-mono">
+              DEA: {institution.deaCode || 'PD11370304'}
             </span>
             <span className="text-slate-500 font-mono text-[10px]">Barcelona, Anzoátegui</span>
           </div>
@@ -100,7 +103,7 @@ export default function Navbar() {
                 {institution.name}
               </div>
               <p className="text-[11px] text-slate-400 font-medium">
-                Zona Educativa de Anzoátegui • Código DEA Oficial
+                Zona Educativa de Anzoátegui • Código DEA: {institution.deaCode || 'PD11370304'}
               </p>
             </div>
           </div>

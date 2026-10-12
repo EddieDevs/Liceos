@@ -27,6 +27,7 @@ export default function LandingPage() {
     announcements,
     setAuthModalOpen,
     setTargetAuthRole,
+    addAdmissionRequest,
     notify
   } = useApp();
 
@@ -44,10 +45,16 @@ export default function LandingPage() {
     setAuthModalOpen(true);
   };
 
-  const handleInterestSubmit = (e) => {
+  const handleInterestSubmit = async (e) => {
     e.preventDefault();
+    await addAdmissionRequest({
+      parentName: interestForm.parentName,
+      phone: interestForm.phone,
+      email: interestForm.email,
+      studentGrade: interestForm.studentGrade,
+      message: interestForm.message
+    });
     setInterestSubmitted(true);
-    notify('Solicitud registrada. El departamento de admisiones se comunicará con usted.');
     setTimeout(() => {
       setInterestForm({
         parentName: '',
@@ -57,7 +64,7 @@ export default function LandingPage() {
         message: ''
       });
       setInterestSubmitted(false);
-    }, 4000);
+    }, 4500);
   };
 
   const activeYear = institution.currentSchoolYear || '2027-2028';
@@ -470,7 +477,7 @@ export default function LandingPage() {
                 {institution.history || 'Fundada el 10 de noviembre de 1989 en Barcelona, Estado Anzoátegui, la institución ha formado generaciones de bachilleres con excelencia académica y vocación de servicio.'}
               </p>
               <div className="pt-3 border-t border-slate-700/60 text-[11px] text-slate-400">
-                Sede autorizada por el Ministerio del Poder Popular para la Educación • Código DEA oficial
+                Sede autorizada por el Ministerio del Poder Popular para la Educación • Código DEA: {institution.deaCode || 'PD11370304'}
               </div>
             </div>
           </div>

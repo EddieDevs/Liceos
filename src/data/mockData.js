@@ -4,10 +4,16 @@ export const initialInstitution = {
   subtitle: 'Institución Educativa de Educación Media General',
   motto: 'Enseñando a vivir',
   currentSchoolYear: '2027-2028',
-  phone: '+58 (281) 286-4192 / +58 (414) 820-1122',
-  email: 'contacto@integralvenezuela.edu.ve',
-  admissionsEmail: 'admisiones@integralvenezuela.edu.ve',
+  phone: '0416-6802168 / 0412-8637615',
+  phone1: '04166802168',
+  phone2: '04128637615',
+  email: 'integralvenezuela@gmail.com',
+  admissionsEmail: 'integralvenezuela@gmail.com',
   adminEmail: 'quinterostudent@gmail.com',
+  deaCode: 'PD11370304',
+  instagram: 'https://www.instagram.com/u.eintegralvenezuela/',
+  whatsapp: 'https://wa.me/584166802168',
+  bcvRate: 48.50,
   address: 'Calle 11, sector Colinas del Neverí, Barcelona, Anzoátegui',
   city: 'Barcelona, Anzoátegui',
   schedule: 'Lunes a Viernes: 7:00 AM - 1:40 PM / Extracurricular hasta 4:30 PM',
@@ -27,7 +33,7 @@ export const initialInstitution = {
     { value: '100%', label: 'Egresados Universitarios' },
     { value: '1989', label: 'Año de Fundación' },
     { value: '5', label: 'Años de Bachillerato' },
-    { value: 'DEA', label: 'Registro MPPE' }
+    { value: 'PD11370304', label: 'Código DEA MPPE' }
   ],
   admissions: {
     period: 'Año Escolar 2027 - 2028',
