@@ -338,6 +338,42 @@ export function AppProvider({ children }) {
         // Fetch payments
         const { data: payData } = await supabase.from('payments').select('*');
         if (payData && payData.length > 0) setPayments(payData);
+
+        // Fetch evaluation plans
+        const { data: epData } = await supabase.from('evaluation_plans').select('*');
+        if (epData && epData.length > 0) setEvaluationPlans(epData);
+
+        // Fetch grades
+        const { data: grData } = await supabase.from('grades').select('*');
+        if (grData && grData.length > 0) {
+          const normGrades = grData.map(g => ({
+            id: g.id,
+            studentId: g.student_id || g.studentId,
+            studentName: g.student_name || g.studentName,
+            subjectName: g.subject_name || g.subjectName,
+            evaluationTitle: g.evaluation_title || g.evaluationTitle,
+            score: Number(g.score) || 0,
+            maxScore: Number(g.max_score) || 20,
+            percentage: Number(g.percentage) || 20,
+            term: g.term || '1er Lapso',
+            comments: g.comments || ''
+          }));
+          setGrades(normGrades);
+        }
+
+        // Fetch attendances
+        const { data: attData } = await supabase.from('attendances').select('*');
+        if (attData && attData.length > 0) {
+          const normAtt = attData.map(a => ({
+            id: a.id,
+            studentId: a.student_id || a.studentId,
+            studentName: a.student_name || a.studentName,
+            date: a.date,
+            status: a.status || 'ausente',
+            reason: a.reason || ''
+          }));
+          setAttendances(normAtt);
+        }
       } catch (err) {
         setSupabaseConnected(false);
       }
@@ -1182,12 +1218,34 @@ export function AppProvider({ children }) {
       setGrades((prev) => [newGrade, ...prev]);
     }
 
+    try {
+      if (supabaseConnected) {
+        await supabase.from('grades').upsert({
+          id: newGrade.id,
+          student_id: newGrade.studentId || newGrade.student_id,
+          student_name: newGrade.studentName || newGrade.student_name,
+          subject_name: newGrade.subjectName || newGrade.subject_name,
+          evaluation_title: newGrade.evaluationTitle || newGrade.evaluation_title,
+          score: Number(newGrade.score) || 0,
+          max_score: Number(newGrade.maxScore || newGrade.max_score) || 20,
+          percentage: Number(newGrade.percentage) || 20,
+          term: newGrade.term || '1er Lapso',
+          comments: newGrade.comments || ''
+        });
+      }
+    } catch (e) {}
+
     notify(isUpdate ? 'Calificación actualizada' : 'Calificación registrada en el sistema');
     return newGrade;
   };
 
-  const deleteGrade = (id) => {
+  const deleteGrade = async (id) => {
     setGrades((prev) => prev.filter((g) => g.id !== id));
+    try {
+      if (supabaseConnected) {
+        await supabase.from('grades').delete().eq('id', id);
+      }
+    } catch (e) {}
     notify('Calificación eliminada');
   };
 
@@ -1199,12 +1257,35 @@ export function AppProvider({ children }) {
       ...planData
     };
     setEvaluationPlans((prev) => [newPlan, ...prev]);
-    notify('Plan de evaluación publicado');
+
+    try {
+      if (supabaseConnected) {
+        await supabase.from('evaluation_plans').insert({
+          id: newPlan.id,
+          subject_name: newPlan.subjectName || newPlan.subject_name || 'General',
+          unit_title: newPlan.unit_title || newPlan.title || 'Unidad de Evaluación',
+          strategy: newPlan.strategy || 'Evaluación Escrita',
+          instrument: newPlan.instrument || 'Escala de Estimación',
+          percentage: Number(newPlan.percentage) || 20,
+          lapso: Number(newPlan.lapso) || 1,
+          evaluation_date: newPlan.evaluation_date || new Date().toISOString().split('T')[0],
+          teacher_name: newPlan.teacher_name || newPlan.teacherName || '',
+          status: 'Programado'
+        });
+      }
+    } catch (e) {}
+
+    notify('Plan de evaluación publicado con éxito');
     return newPlan;
   };
 
-  const deleteEvaluationPlan = (id) => {
+  const deleteEvaluationPlan = async (id) => {
     setEvaluationPlans((prev) => prev.filter((p) => p.id !== id));
+    try {
+      if (supabaseConnected) {
+        await supabase.from('evaluation_plans').delete().eq('id', id);
+      }
+    } catch (e) {}
     notify('Plan de evaluación retirado');
   };
 
@@ -1217,6 +1298,20 @@ export function AppProvider({ children }) {
       ...attData
     };
     setAttendances((prev) => [newAtt, ...prev]);
+
+    try {
+      if (supabaseConnected) {
+        await supabase.from('attendances').insert({
+          id: newAtt.id,
+          student_id: newAtt.studentId || newAtt.student_id,
+          student_name: newAtt.studentName || newAtt.student_name,
+          date: newAtt.date,
+          status: newAtt.status || 'ausente',
+          reason: newAtt.reason || ''
+        });
+      }
+    } catch (e) {}
+
     notify('Inasistencia registrada en el expediente');
     return newAtt;
   };

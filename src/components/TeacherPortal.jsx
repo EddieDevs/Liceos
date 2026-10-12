@@ -15,7 +15,9 @@ import {
   CheckCircle2,
   AlertCircle,
   Coffee,
-  Sparkles
+  Sparkles,
+  School,
+  X
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
@@ -571,9 +573,16 @@ export default function TeacherPortal() {
                   }}
                   className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
                 >
-                  {students.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name} ({s.grade_year || s.gradeLevel})</option>
-                  ))}
+                  {students.length === 0 ? (
+                    <option value="">-- No hay alumnos matriculados aún --</option>
+                  ) : (
+                    <>
+                      <option value="">-- Seleccionar Estudiante --</option>
+                      {students.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name} ({s.grade_year || s.gradeLevel} - {s.section || 'A'})</option>
+                      ))}
+                    </>
+                  )}
                 </select>
               </div>
 
@@ -581,13 +590,35 @@ export default function TeacherPortal() {
               <div>
                 <label className="block text-slate-300 mb-1 font-medium">Asignatura (Selector)</label>
                 <select
+                  required
                   value={gradeFormData.subjectName}
                   onChange={(e) => setGradeFormData({ ...gradeFormData, subjectName: e.target.value })}
                   className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
                 >
-                  {subjects.map((s) => (
-                    <option key={s.id} value={s.name}>{s.name} ({s.gradeLevel})</option>
-                  ))}
+                  <option value="">-- Seleccionar Asignatura --</option>
+                  {currentTeacher.specialty && (
+                    <option value={currentTeacher.specialty}>{currentTeacher.specialty} (Mi Cátedra)</option>
+                  )}
+                  {subjects.length > 0 && (
+                    <optgroup label="Asignaturas del Plantel">
+                      {subjects.map((s) => (
+                        <option key={s.id} value={s.name}>{s.name} ({s.grade_level || s.gradeLevel || 'Bachillerato'})</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  <optgroup label="Cátedras de Bachillerato">
+                    <option value="Castellano y Literatura">Castellano y Literatura</option>
+                    <option value="Matemáticas">Matemáticas</option>
+                    <option value="Física">Física</option>
+                    <option value="Química">Química</option>
+                    <option value="Biología">Biología</option>
+                    <option value="Historia de Venezuela">Historia de Venezuela</option>
+                    <option value="Geografía, Historia y Ciudadanía">Geografía, Historia y Ciudadanía</option>
+                    <option value="Inglés">Inglés</option>
+                    <option value="Educación Física">Educación Física</option>
+                    <option value="Informática y Computación">Informática y Computación</option>
+                    <option value="Orientación y Convivencia">Orientación y Convivencia</option>
+                  </optgroup>
                 </select>
               </div>
 
@@ -729,13 +760,35 @@ export default function TeacherPortal() {
               <div>
                 <label className="block text-slate-300 mb-1 font-medium">Asignatura (Selector)</label>
                 <select
+                  required
                   value={planFormData.subjectName}
                   onChange={(e) => setPlanFormData({ ...planFormData, subjectName: e.target.value })}
                   className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
                 >
-                  {subjects.map((s) => (
-                    <option key={s.id} value={s.name}>{s.name} ({s.gradeLevel})</option>
-                  ))}
+                  <option value="">-- Seleccionar Asignatura --</option>
+                  {currentTeacher.specialty && (
+                    <option value={currentTeacher.specialty}>{currentTeacher.specialty} (Mi Cátedra)</option>
+                  )}
+                  {subjects.length > 0 && (
+                    <optgroup label="Asignaturas del Plantel">
+                      {subjects.map((s) => (
+                        <option key={s.id} value={s.name}>{s.name} ({s.grade_level || s.gradeLevel || 'Bachillerato'})</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  <optgroup label="Cátedras de Bachillerato">
+                    <option value="Castellano y Literatura">Castellano y Literatura</option>
+                    <option value="Matemáticas">Matemáticas</option>
+                    <option value="Física">Física</option>
+                    <option value="Química">Química</option>
+                    <option value="Biología">Biología</option>
+                    <option value="Historia de Venezuela">Historia de Venezuela</option>
+                    <option value="Geografía, Historia y Ciudadanía">Geografía, Historia y Ciudadanía</option>
+                    <option value="Inglés">Inglés</option>
+                    <option value="Educación Física">Educación Física</option>
+                    <option value="Informática y Computación">Informática y Computación</option>
+                    <option value="Orientación y Convivencia">Orientación y Convivencia</option>
+                  </optgroup>
                 </select>
               </div>
 

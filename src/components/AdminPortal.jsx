@@ -31,7 +31,8 @@ import {
   RotateCcw,
   Sparkles,
   Upload,
-  Camera
+  Camera,
+  User
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import CertificateModal from './CertificateModal';
