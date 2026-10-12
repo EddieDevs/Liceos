@@ -11,7 +11,9 @@ import {
   Send,
   ExternalLink,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Sparkles,
+  Calendar
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import ReportCardModal from './ReportCardModal';
@@ -20,39 +22,42 @@ import { readFileAsDataURL } from '../lib/fileUpload';
 export default function RepresentativePortal() {
   const {
     currentUser,
-    updateUserProfile,
     students,
     grades,
     subjects,
     payments,
     addPayment,
-    attendances,
-    setActiveTab,
+    institution,
     notify
   } = useApp();
 
-  const [activeSubTab, setActiveSubTab] = useState('payments'); // 'payments', 'grades', 'attendance', 'profile'
+  const [activeSubTab, setActiveSubTab] = useState('payments'); // 'payments', 'grades', 'profile'
   const [reportCardModalOpen, setReportCardModalOpen] = useState(false);
+  const [selectedStudentForReport, setSelectedStudentForReport] = useState(null);
 
   // Wards (represented students)
   const myStudents = students.filter(
-    (s) => s.representativeId === currentUser?.id || s.representativeEmail === currentUser?.email
+    (s) =>
+      s.representativeId === currentUser?.id ||
+      s.representativeName?.toLowerCase() === currentUser?.name?.toLowerCase() ||
+      s.representativePhone === currentUser?.phone
   );
-  const activeStudent = myStudents[0] || null;
+
+  // Selected student for paying / viewing (fallback to first ward or first student in system)
+  const [selectedStudentId, setSelectedStudentId] = useState(myStudents[0]?.id || students[0]?.id || '');
+  const activeStudent = students.find((s) => s.id === selectedStudentId) || myStudents[0] || students[0] || null;
 
   // Receipt File upload state
   const receiptFileInputRef = useRef(null);
   const [receiptPreview, setReceiptPreview] = useState('');
 
+  const activeYear = institution.currentSchoolYear || '2027-2028';
+
   // Payment form state
   const [paymentForm, setPaymentForm] = useState({
-    studentId: activeStudent?.id || '',
-    studentName: activeStudent?.name || '',
-    studentGrade: activeStudent?.gradeLevel || '4to Año',
     concept: 'Mensualidad Escolar',
-    paymentMethod: 'Pago Móvil',
-    amount: 0,
-    currency: 'USD',
+    paymentMethod: 'Pago Móvil Interbancario',
+    amount: '',
     referenceNumber: '',
     paymentDate: new Date().toISOString().split('T')[0],
   });
@@ -81,260 +86,207 @@ export default function RepresentativePortal() {
       return;
     }
 
+    if (!activeStudent) {
+      notify('Selecciona o registra un alumno para asociar el pago', 'error');
+      return;
+    }
+
     await addPayment({
-      representativeId: currentUser?.id || 'rep-anon',
-      representativeName: currentUser?.name || 'Representante',
-      studentId: paymentForm.studentId || (activeStudent?.id || 'sin-alumno'),
-      studentName: paymentForm.studentName || (activeStudent?.name || 'Alumno sin asignar'),
-      studentGrade: paymentForm.studentGrade || (activeStudent?.gradeLevel || 'Bachillerato'),
+      representativeName: currentUser?.name || 'Representante Legal',
+      studentName: activeStudent.name,
+      studentGrade: `${activeStudent.grade_year || activeStudent.gradeLevel} (${activeStudent.section || 'A'})`,
       paymentConcept: paymentForm.concept,
       paymentMethod: paymentForm.paymentMethod,
       amount: Number(paymentForm.amount),
-      currency: paymentForm.currency,
       referenceNumber: paymentForm.referenceNumber,
       paymentDate: paymentForm.paymentDate,
       receiptUrl: receiptPreview || ''
     });
 
     setPaymentForm({
-      ...paymentForm,
+      concept: 'Mensualidad Escolar',
+      paymentMethod: 'Pago Móvil Interbancario',
+      amount: '',
       referenceNumber: '',
-      amount: 0
+      paymentDate: new Date().toISOString().split('T')[0],
     });
     setReceiptPreview('');
   };
 
   // Student specific grades
-  const studentGrades = activeStudent
-    ? grades.filter((g) => g.studentId === activeStudent.id || g.studentName === activeStudent.name)
-    : [];
-
-  // Student attendances
-  const studentAtts = activeStudent
-    ? attendances.filter((a) => a.studentId === activeStudent.id || a.studentName === activeStudent.name)
-    : [];
+  const studentGrades = grades.filter(
+    (g) => g.studentId === activeStudent?.id || g.studentName === activeStudent?.name
+  );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 pb-20">
-      {/* 1. Header Banner */}
-      <div className="bg-slate-900/80 border-b border-slate-800/80 pt-8 pb-14 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-2 text-xs text-slate-400 mb-4">
-            <button onClick={() => setActiveTab('home')} className="hover:text-white transition">
-              Inicio
-            </button>
-            <ChevronRight className="w-3.5 h-3.5" />
-            <span className="text-white font-medium">Portal de Padres y Representantes</span>
+    <div className="min-h-screen denim-pattern text-slate-100 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header Profile Summary */}
+        <div className="denim-card p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-[#223C63] border-2 border-[#DCB35C] flex items-center justify-center text-[#DCB35C] shadow-lg">
+              <CreditCard className="w-8 h-8 text-[#DCB35C]" />
+            </div>
+            <div>
+              <div className="inline-flex items-center gap-2 denim-patch px-2.5 py-0.5 text-[11px] mb-1">
+                <Sparkles className="w-3 h-3 text-[#DCB35C]" />
+                <span>Portal de Representantes Legales</span>
+                <span className="text-slate-500">•</span>
+                <span className="text-white font-semibold">Año Escolar {activeYear}</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-black font-slab text-white tracking-tight">
+                {currentUser?.name || 'Representante Legal'}
+              </h1>
+              <p className="text-xs text-slate-300 font-mono">
+                {currentUser?.email} • U.E. Colegio Integral Venezuela
+              </p>
+            </div>
           </div>
 
-          <div className="glass-surface p-6 sm:p-7 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400">
-                <User className="w-8 h-8" />
-              </div>
+          <div className="flex items-center gap-3">
+            {activeStudent && (
+              <button
+                onClick={() => {
+                  setSelectedStudentForReport(activeStudent);
+                  setReportCardModalOpen(true);
+                }}
+                className="px-4 py-2.5 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] hover:brightness-105 text-[#1A2B45] font-bold font-slab rounded-xl text-xs flex items-center gap-2 shadow-md transition cursor-pointer"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Boletín de {activeStudent.name.split(' ')[0]}</span>
+              </button>
+            )}
+          </div>
+        </div>
 
-              <div>
-                <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 text-[11px] font-semibold border border-emerald-400/20 inline-block mb-1">
-                  Representante Titular
-                </span>
-                <h1 className="text-2xl sm:text-3xl font-bold font-heading text-white">
-                  {currentUser?.name || 'Representante Legal'}
-                </h1>
-                <p className="text-xs text-slate-400">
-                  {currentUser?.email || 'Sin correo asignado'} • Representados: <strong className="text-white">{activeStudent ? activeStudent.name : '0 asignados'}</strong>
+        {/* Sub-Navigation Tabs */}
+        <div className="flex flex-wrap gap-2 border-b border-slate-700/60 pb-3 text-xs font-medium">
+          {[
+            { id: 'payments', label: 'Reportar Pagos y Aranceles', icon: CreditCard },
+            { id: 'grades', label: 'Rendimiento y Boletín de Representados', icon: BookOpen },
+            { id: 'profile', label: 'Datos del Representante', icon: User },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeSubTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveSubTab(tab.id)}
+                className={`px-3.5 py-2 rounded-xl transition flex items-center gap-2 cursor-pointer ${
+                  isActive
+                    ? 'bg-[#223C63] text-white font-bold font-slab border border-[#DCB35C]/50 shadow-inner'
+                    : 'bg-[#152338]/80 text-slate-300 hover:text-white hover:bg-[#1A2B45] border border-slate-700/60'
+                }`}
+              >
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#DCB35C]' : 'text-slate-400'}`} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* SUBTAB: PAYMENTS */}
+        {activeSubTab === 'payments' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fade-in">
+            {/* Formulario de Reporte de Pago */}
+            <div className="lg:col-span-7 denim-card p-6 space-y-4">
+              <div className="border-b border-slate-700/60 pb-3">
+                <h2 className="text-base font-bold font-slab text-white flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-[#DCB35C]" />
+                  <span>Reportar Pago o Transferencia Bancaria</span>
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Registra tu referencia y sube el comprobante directamente en archivo
                 </p>
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-2.5 text-center w-full md:w-auto">
-              <div className="glass-surface-subtle px-4 py-2.5 rounded-xl text-center">
-                <div className="text-xl font-bold font-heading text-white">
-                  {activeStudent ? `${activeStudent.overallAverage || '0.0'} pts` : '0'}
-                </div>
-                <div className="text-[10px] text-slate-400 uppercase font-medium">Promedio Hijo</div>
-              </div>
-              <div className="glass-surface-subtle px-4 py-2.5 rounded-xl text-center">
-                <div className="text-xl font-bold font-heading text-emerald-400">
-                  {payments.filter((p) => p.status === 'approved').length}
-                </div>
-                <div className="text-[10px] text-slate-400 uppercase font-medium">Pagos Solvente</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. Subtabs Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6">
-        <div className="glass-surface rounded-xl p-1 flex gap-1 overflow-x-auto text-xs font-semibold shadow-md">
-          <button
-            onClick={() => setActiveSubTab('payments')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
-              activeSubTab === 'payments' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <CreditCard className="w-4 h-4" />
-            <span>Gestión de Pagos y Comprobantes</span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('grades')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
-              activeSubTab === 'grades' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <BookOpen className="w-4 h-4" />
-            <span>Boletín de Notas del Alumno</span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('attendance')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
-              activeSubTab === 'attendance' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <Clock className="w-4 h-4" />
-            <span>Asistencias y Faltas ({studentAtts.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('profile')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
-              activeSubTab === 'profile' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <User className="w-4 h-4" />
-            <span>Ficha del Representante</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 3. Main Workspace */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-        {/* SUBTAB 1: PAYMENTS */}
-        {activeSubTab === 'payments' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* Formulario de Pago */}
-            <div className="lg:col-span-5 glass-card p-6 sm:p-7 rounded-2xl">
-              <div className="flex items-center gap-2 mb-1">
-                <CreditCard className="w-5 h-5 text-blue-400" />
-                <h2 className="text-base font-bold font-heading text-white">
-                  Reportar Pago o Transferencia
-                </h2>
-              </div>
-              <p className="text-xs text-slate-400 mb-5">
-                Carga directamente el soporte bancario para su verificación
-              </p>
-
-              <form onSubmit={handlePaymentSubmit} className="space-y-4 text-xs">
+              <form onSubmit={handlePaymentSubmit} className="space-y-3.5 text-xs">
+                {/* Selector de Estudiante */}
                 <div>
-                  <label className="block text-slate-400 mb-1">Alumno Representado</label>
-                  {myStudents.length === 0 ? (
-                    <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-400">
-                      Sin alumnos asociados en este momento
-                    </div>
-                  ) : (
-                    <select
-                      value={paymentForm.studentId}
-                      onChange={(e) => {
-                        const st = myStudents.find((s) => s.id === e.target.value);
-                        setPaymentForm({
-                          ...paymentForm,
-                          studentId: e.target.value,
-                          studentName: st?.name || '',
-                          studentGrade: st?.gradeLevel || ''
-                        });
-                      }}
-                      className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
-                    >
-                      {myStudents.map((st) => (
-                        <option key={st.id} value={st.id}>
-                          {st.name} ({st.gradeLevel || 'Bachillerato'})
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-slate-400 mb-1">Concepto de Pago</label>
+                  <label className="block text-slate-300 mb-1 font-medium">Estudiante Asociado (Selector)</label>
                   <select
-                    value={paymentForm.concept}
-                    onChange={(e) => setPaymentForm({ ...paymentForm, concept: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                    value={selectedStudentId}
+                    onChange={(e) => setSelectedStudentId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
                   >
-                    <option value="Mensualidad Escolar">Mensualidad Escolar</option>
-                    <option value="Matrícula y Seguro Escolar">Matrícula y Seguro Escolar</option>
-                    <option value="Constancia de Notas / Estudio">Constancia de Notas / Estudio</option>
-                    <option value="Trámite Administrativo">Trámite Administrativo</option>
+                    {students.length === 0 ? (
+                      <option value="">No hay alumnos matriculados por la dirección</option>
+                    ) : (
+                      students.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} — C.I: {s.cedula || 'Sin cédula'} ({s.grade_year || s.gradeLevel} {s.section})
+                        </option>
+                      ))
+                    )}
                   </select>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-slate-400 mb-1">Método de Pago</label>
+                    <label className="block text-slate-300 mb-1 font-medium">Concepto</label>
+                    <select
+                      value={paymentForm.concept}
+                      onChange={(e) => setPaymentForm({ ...paymentForm, concept: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
+                    >
+                      <option value="Mensualidad Escolar">Mensualidad Escolar</option>
+                      <option value="Matrícula Oficial">Matrícula Oficial</option>
+                      <option value="Seguro Escolar">Seguro Escolar</option>
+                      <option value="Constancia o Trámites">Constancia o Trámites</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-slate-300 mb-1 font-medium">Método de Pago</label>
                     <select
                       value={paymentForm.paymentMethod}
                       onChange={(e) => setPaymentForm({ ...paymentForm, paymentMethod: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                      className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
                     >
-                      <option value="Pago Móvil">Pago Móvil</option>
-                      <option value="Transferencia Bancaria">Transferencia Bancaria</option>
-                      <option value="Zelle">Zelle</option>
-                      <option value="Efectivo Divisas">Efectivo Divisas en Sede</option>
-                      <option value="Punto de Venta">Punto de Venta en Sede</option>
+                      <option value="Pago Móvil Interbancario">Pago Móvil Interbancario</option>
+                      <option value="Transferencia Banesco / Mercantil">Transferencia Bancaria Nacional</option>
+                      <option value="Efectivo en Caja">Efectivo en Administración</option>
+                      <option value="Zelle / Divisas">Zelle / Transferencia Internacional</option>
                     </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-400 mb-1">Monto ($ USD)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      required
-                      value={paymentForm.amount}
-                      onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white font-bold"
-                    />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-slate-400 mb-1">Nº de Referencia</label>
+                    <label className="block text-slate-300 mb-1 font-medium">Monto Pagado ($ o Bs)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      placeholder="Ej. 65.00"
+                      value={paymentForm.amount}
+                      onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-300 mb-1 font-medium">Número de Referencia</label>
                     <input
                       type="text"
                       required
-                      placeholder="Ej. 0102-849201"
+                      placeholder="Ej. 094812"
                       value={paymentForm.referenceNumber}
                       onChange={(e) => setPaymentForm({ ...paymentForm, referenceNumber: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-400 mb-1">Fecha de la Operación</label>
-                    <input
-                      type="date"
-                      required
-                      value={paymentForm.paymentDate}
-                      onChange={(e) => setPaymentForm({ ...paymentForm, paymentDate: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                      className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] font-mono"
                     />
                   </div>
                 </div>
 
-                {/* Direct Comprobante Upload Button */}
+                {/* Subida Directa de Archivo de Comprobante */}
                 <div>
-                  <label className="block text-slate-400 mb-1">Comprobante / Captura Bancaria</label>
+                  <label className="block text-slate-300 mb-1 font-medium">Comprobante de Pago (Foto o Captura)</label>
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
                       onClick={() => receiptFileInputRef.current?.click()}
-                      className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg text-white font-medium flex items-center gap-2"
+                      className="px-3.5 py-2 bg-[#223C63] hover:bg-[#1A2B45] border border-[#DCB35C]/50 rounded-xl text-[#f0c36d] font-bold font-slab flex items-center gap-2 cursor-pointer"
                     >
-                      <Upload className="w-3.5 h-3.5 text-blue-400" />
-                      <span>Subir Comprobante Directamente</span>
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Subir Comprobante (Archivo)</span>
                     </button>
                     <input
                       type="file"
@@ -344,12 +296,12 @@ export default function RepresentativePortal() {
                       className="hidden"
                     />
                     {receiptPreview && (
-                      <span className="text-[11px] text-emerald-400 font-medium">Archivo cargado</span>
+                      <span className="text-[11px] text-emerald-400 font-medium">Comprobante adjuntado</span>
                     )}
                   </div>
 
                   {receiptPreview && (
-                    <div className="mt-2 h-24 rounded-lg overflow-hidden border border-slate-700">
+                    <div className="mt-2.5 h-24 rounded-xl overflow-hidden border border-slate-700 max-w-xs">
                       <img src={receiptPreview} alt="Receipt preview" className="w-full h-full object-cover" />
                     </div>
                   )}
@@ -357,167 +309,112 @@ export default function RepresentativePortal() {
 
                 <button
                   type="submit"
-                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg shadow-xs transition"
+                  className="w-full py-2.5 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab rounded-xl shadow-lg transition cursor-pointer"
                 >
-                  Enviar Pago a Administración
+                  Enviar Comprobante a Administración
                 </button>
               </form>
             </div>
 
-            {/* Listado de Pagos */}
-            <div className="lg:col-span-7 glass-card p-6 rounded-2xl space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                <h3 className="font-bold text-white text-sm font-heading">
-                  Historial de Pagos y Estado de Cuenta
+            {/* Datos Bancarios y Resumen */}
+            <div className="lg:col-span-5 space-y-4">
+              <div className="denim-card p-6 space-y-3">
+                <h3 className="text-sm font-bold font-slab text-[#f0c36d] uppercase tracking-wider">
+                  Coordenadas Bancarias del Plantel
                 </h3>
-                <span className="text-xs text-slate-400">{payments.length} transacciones</span>
+                <div className="text-xs text-slate-300 space-y-2 font-mono p-3.5 bg-[#101c30] rounded-xl border border-slate-700">
+                  <div><strong>Banco:</strong> Banesco Banco Universal</div>
+                  <div><strong>Cuenta:</strong> 0134-0374-91-3741029384</div>
+                  <div><strong>Pago Móvil:</strong> Banesco (0134)</div>
+                  <div><strong>RIF:</strong> J-30491823-1</div>
+                  <div><strong>Teléfono:</strong> 0414-8201122</div>
+                  <div><strong>Titular:</strong> U.E. Colegio Integral Venezuela</div>
+                </div>
               </div>
 
-              {payments.length === 0 ? (
-                <div className="p-10 text-center text-xs text-slate-500 italic">
-                  No hay pagos reportados en la plataforma.
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {payments.map((p) => (
-                    <div
-                      key={p.id}
-                      className="p-4 rounded-xl border border-slate-800 bg-slate-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
-                    >
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-bold text-white text-sm">{p.paymentConcept}</span>
-                          <span className="text-slate-400 font-mono text-[11px]">#{p.referenceNumber}</span>
+              {/* Historial de Pagos Reportados */}
+              <div className="denim-card p-6 space-y-3">
+                <h3 className="text-sm font-bold font-slab text-white">Mis Pagos Reportados</h3>
+                {payments.length === 0 ? (
+                  <div className="text-xs text-slate-500 italic py-3 text-center">No has reportado pagos recientes.</div>
+                ) : (
+                  <div className="space-y-2 text-xs">
+                    {payments.map((p) => (
+                      <div key={p.id} className="p-3 rounded-xl bg-[#101c30] border border-slate-700/80 flex justify-between items-center">
+                        <div>
+                          <div className="font-bold text-white">{p.concept || p.payment_concept}</div>
+                          <div className="text-[11px] text-slate-400 font-mono">Ref: {p.referenceNumber || p.reference_number} • ${p.amount}</div>
                         </div>
-                        <div className="text-slate-400">
-                          {p.paymentMethod} • Fecha: {p.paymentDate}
-                        </div>
-                        <div className="text-[11px] text-slate-500 mt-1">
-                          Alumno: {p.studentName || 'Sin asignar'}
-                        </div>
-                        {p.admin_notes && (
-                          <div className="text-[11px] text-slate-400 mt-1 italic">
-                            Nota de Dirección: "{p.admin_notes}"
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="text-right shrink-0">
-                        <div className="text-base font-bold text-white font-heading">
-                          ${Number(p.amount).toFixed(2)} {p.currency}
-                        </div>
-                        <span
-                          className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold mt-1 ${
-                            p.status === 'approved'
-                              ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
-                              : p.status === 'rejected'
-                              ? 'bg-rose-950 text-rose-300 border border-rose-800'
-                              : 'bg-amber-950 text-amber-300 border border-amber-800'
-                          }`}
-                        >
-                          {p.status === 'approved'
-                            ? 'Aprobado y Solvente'
-                            : p.status === 'rejected'
-                            ? 'Rechazado'
-                            : 'En Verificación'}
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${p.status === 'approved' ? 'bg-emerald-950 text-emerald-300' : 'bg-amber-950 text-amber-300'}`}>
+                          {p.status === 'approved' ? 'Aprobado' : 'Pendiente'}
                         </span>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
 
-        {/* SUBTAB 2: GRADES */}
+        {/* SUBTAB: GRADES & REPORT CARD */}
         {activeSubTab === 'grades' && (
-          <div className="glass-card p-6 sm:p-7 rounded-2xl space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="denim-card p-6 space-y-4 animate-fade-in">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-700/60 pb-3">
               <div>
-                <h2 className="text-base font-bold font-heading text-white">
-                  Boletín del Alumno: {activeStudent?.name || 'Sin alumno asignado'}
-                </h2>
+                <h2 className="text-base font-bold font-slab text-white">Rendimiento Académico del Alumno</h2>
                 <p className="text-xs text-slate-400">
-                  Año Escolar 2024-2025 • {activeStudent?.gradeLevel || 'Bachillerato'}
+                  Boletín y calificaciones oficiales para {activeStudent?.name || 'el estudiante'}
                 </p>
               </div>
 
               {activeStudent && (
                 <button
-                  onClick={() => setReportCardModalOpen(true)}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition shadow-xs"
+                  onClick={() => {
+                    setSelectedStudentForReport(activeStudent);
+                    setReportCardModalOpen(true);
+                  }}
+                  className="px-4 py-2 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab text-xs rounded-xl flex items-center gap-2 shadow-md cursor-pointer"
                 >
-                  <Printer className="w-3.5 h-3.5" />
+                  <Printer className="w-4 h-4" />
                   <span>Imprimir Boletín Oficial</span>
                 </button>
               )}
             </div>
 
-            {!activeStudent ? (
-              <div className="p-10 text-center text-xs text-slate-500 italic">
-                No tienes representados vinculados actualmente en la base de datos.
-              </div>
-            ) : studentGrades.length === 0 ? (
-              <div className="p-10 text-center text-xs text-slate-500 italic">
-                No hay calificaciones cargadas aún para tu representado.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
-                      <th className="py-2.5 px-3">Materia</th>
-                      <th className="py-2.5 px-3">Evaluación</th>
-                      <th className="py-2.5 px-3">Lapso</th>
-                      <th className="py-2.5 px-3 text-center">Nota</th>
-                      <th className="py-2.5 px-3 text-center">Ponderación</th>
-                      <th className="py-2.5 px-3">Observaciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/80">
-                    {studentGrades.map((gr) => (
-                      <tr key={gr.id} className="hover:bg-slate-800/40">
-                        <td className="py-3 px-3 font-bold text-white">{gr.subjectName}</td>
-                        <td className="py-3 px-3 text-slate-200">{gr.evaluationTitle}</td>
-                        <td className="py-3 px-3 text-slate-400">{gr.term}</td>
-                        <td className="py-3 px-3 text-center">
-                          <span className="font-bold text-blue-400 bg-blue-950 border border-blue-800 px-2 py-0.5 rounded">
-                            {gr.score} / {gr.maxScore || 20}
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 text-center text-slate-300 font-medium">{gr.percentage}%</td>
-                        <td className="py-3 px-3 text-slate-400 italic">{gr.comments || '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
+            {/* Selector de estudiante */}
+            <div className="max-w-md">
+              <label className="block text-xs font-medium text-slate-300 mb-1">Seleccionar Representado</label>
+              <select
+                value={selectedStudentId}
+                onChange={(e) => setSelectedStudentId(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white text-xs focus:border-[#DCB35C]"
+              >
+                {students.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.grade_year || s.gradeLevel} {s.section})
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        {/* SUBTAB 3: ATTENDANCE */}
-        {activeSubTab === 'attendance' && (
-          <div className="glass-card p-6 sm:p-7 rounded-2xl space-y-4">
-            <h2 className="text-base font-bold font-heading text-white">
-              Notificaciones de Asistencia y Faltas
-            </h2>
-            {studentAtts.length === 0 ? (
-              <div className="p-8 text-center text-xs text-slate-500 italic">
-                Tu representado no tiene inasistencias reportadas en la institución.
+            {studentGrades.length === 0 ? (
+              <div className="p-10 text-center rounded-2xl bg-[#101c30] border-stitch-subtle">
+                <BookOpen className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+                <div className="font-bold text-slate-300 font-slab">No hay calificaciones publicadas aún</div>
+                <p className="text-xs text-slate-500 mt-1">Los docentes registrarán las notas a medida que se cumpla el plan de evaluación.</p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {studentAtts.map((att) => (
-                  <div key={att.id} className="p-3.5 rounded-xl border border-slate-800 bg-slate-900/60 flex items-center justify-between text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {studentGrades.map((g) => (
+                  <div key={g.id} className="p-4 rounded-xl bg-[#101c30] border border-slate-700 flex justify-between items-center text-xs">
                     <div>
-                      <div className="font-bold text-white">{att.subject} • {att.date}</div>
-                      <div className="text-slate-400 mt-0.5">{att.notes}</div>
+                      <div className="font-bold text-white font-slab">{g.subjectName || g.subject_name}</div>
+                      <div className="text-slate-400">{g.evaluationTitle || g.evaluation_title || 'Evaluación'}</div>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-800">
-                      {att.statusLabel}
-                    </span>
+                    <div className="text-right">
+                      <span className="text-lg font-black font-mono text-[#f0c36d]">{g.score || g.nota} pts</span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -525,36 +422,34 @@ export default function RepresentativePortal() {
           </div>
         )}
 
-        {/* SUBTAB 4: PROFILE */}
+        {/* SUBTAB: PROFILE */}
         {activeSubTab === 'profile' && (
-          <div className="glass-card p-6 sm:p-8 rounded-2xl space-y-6 max-w-2xl">
-            <h2 className="text-base font-bold font-heading text-white">Ficha del Representante Legal</h2>
-            <div className="grid grid-cols-2 gap-4 text-xs">
-              <div>
-                <label className="text-slate-500 block mb-0.5">Nombre Completo</label>
-                <div className="font-bold text-white text-sm">{currentUser?.name || 'Representante'}</div>
+          <div className="denim-card p-6 max-w-xl mx-auto space-y-4 animate-fade-in text-xs">
+            <h2 className="text-base font-bold font-slab text-white border-b border-slate-700/60 pb-2">
+              Ficha del Representante Legal
+            </h2>
+            <div className="space-y-3">
+              <div className="p-3.5 rounded-xl bg-[#101c30] border border-slate-700">
+                <span className="text-slate-400 block text-[10px] uppercase">Nombre:</span>
+                <strong className="text-white text-sm font-slab">{currentUser?.name}</strong>
               </div>
-              <div>
-                <label className="text-slate-500 block mb-0.5">Correo Electrónico</label>
-                <div className="font-bold text-white text-sm">{currentUser?.email || 'Sin correo'}</div>
+              <div className="p-3.5 rounded-xl bg-[#101c30] border border-slate-700">
+                <span className="text-slate-400 block text-[10px] uppercase">Correo Registrado:</span>
+                <strong className="text-white font-mono">{currentUser?.email}</strong>
               </div>
-              <div>
-                <label className="text-slate-500 block mb-0.5">Alumno Vinculado</label>
-                <div className="font-bold text-white text-sm">{activeStudent?.name || 'Sin alumno asignado'}</div>
-              </div>
-              <div>
-                <label className="text-slate-500 block mb-0.5">Sede Escolar</label>
-                <div className="font-bold text-white text-sm">Colinas del Neverí, Barcelona</div>
+              <div className="p-3.5 rounded-xl bg-[#101c30] border border-slate-700">
+                <span className="text-slate-400 block text-[10px] uppercase">Teléfono de Contacto:</span>
+                <strong className="text-white">{currentUser?.phone || 'No registrado'}</strong>
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Report Card Modal */}
-      {reportCardModalOpen && activeStudent && (
+      {/* Official Report Card Modal */}
+      {reportCardModalOpen && selectedStudentForReport && (
         <ReportCardModal
-          student={activeStudent}
+          student={selectedStudentForReport}
           grades={grades}
           subjects={subjects}
           onClose={() => setReportCardModalOpen(false)}

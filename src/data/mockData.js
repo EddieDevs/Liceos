@@ -3,6 +3,7 @@ export const initialInstitution = {
   shortName: 'Integral Venezuela',
   subtitle: 'Institución Educativa de Educación Media General',
   motto: 'Enseñando a vivir',
+  currentSchoolYear: '2027-2028',
   phone: '+58 (281) 286-4192 / +58 (414) 820-1122',
   email: 'contacto@integralvenezuela.edu.ve',
   admissionsEmail: 'admisiones@integralvenezuela.edu.ve',
@@ -29,13 +30,13 @@ export const initialInstitution = {
     { value: 'DEA', label: 'Registro MPPE' }
   ],
   admissions: {
-    period: 'Año Escolar 2024 - 2025',
+    period: 'Año Escolar 2027 - 2028',
     status: 'Inscripciones y Prosecución Abiertas',
     steps: [
       { step: '01', title: 'Registro y Pre-inscripción', desc: 'Completar el formulario digital o presencial con los datos del alumno y representante legal.' },
       { step: '02', title: 'Consignación de Recaudos', desc: 'Entrega de notas certificadas, partida de nacimiento, cédulas y constancias en Control de Estudios.' },
       { step: '03', title: 'Entrevista Pedagógica', desc: 'Jornada de orientación vocacional y conocimiento familiar con el Departamento de Orientación.' },
-      { step: '04', title: 'Formalización y Matrícula', desc: 'Asignación de sección, entrega de carnet y cronograma del año escolar.' },
+      { step: '04', title: 'Formalización y Matrícula', desc: 'Asignación de sección oficial, entrega de credenciales institucionales y cronograma.' },
     ],
     requirements: [
       'Original y copia de la Partida de Nacimiento del estudiante.',
@@ -84,16 +85,46 @@ export const initialAdmin = {
   name: 'Larry González',
   title: 'Director General',
   email: 'quinterostudent@gmail.com',
+  password: 'admin',
   role: 'admin',
   avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&auto=format&fit=crop&q=80',
   phone: '+58 (414) 820-1122'
 };
 
-// All other tables start empty as requested for real database operations
+// Initial default sections in Venezuelan high school system (1er a 5to año, A a C)
+export const initialSections = [
+  { id: 'sec-1a', year: '1er Año', section: 'A', name: '1er Año - Sección A', capacity: 35, classroom: 'Aula 01', guideTeacher: 'Por asignar' },
+  { id: 'sec-1b', year: '1er Año', section: 'B', name: '1er Año - Sección B', capacity: 35, classroom: 'Aula 02', guideTeacher: 'Por asignar' },
+  { id: 'sec-1c', year: '1er Año', section: 'C', name: '1er Año - Sección C', capacity: 35, classroom: 'Aula 03', guideTeacher: 'Por asignar' },
+  { id: 'sec-2a', year: '2do Año', section: 'A', name: '2do Año - Sección A', capacity: 35, classroom: 'Aula 04', guideTeacher: 'Por asignar' },
+  { id: 'sec-2b', year: '2do Año', section: 'B', name: '2do Año - Sección B', capacity: 35, classroom: 'Aula 05', guideTeacher: 'Por asignar' },
+  { id: 'sec-2c', year: '2do Año', section: 'C', name: '2do Año - Sección C', capacity: 35, classroom: 'Aula 06', guideTeacher: 'Por asignar' },
+  { id: 'sec-3a', year: '3er Año', section: 'A', name: '3er Año - Sección A', capacity: 35, classroom: 'Aula 07', guideTeacher: 'Por asignar' },
+  { id: 'sec-3b', year: '3er Año', section: 'B', name: '3er Año - Sección B', capacity: 35, classroom: 'Aula 08', guideTeacher: 'Por asignar' },
+  { id: 'sec-3c', year: '3er Año', section: 'C', name: '3er Año - Sección C', capacity: 35, classroom: 'Aula 09', guideTeacher: 'Por asignar' },
+  { id: 'sec-4a', year: '4to Año', section: 'A', name: '4to Año - Sección A', capacity: 35, classroom: 'Aula 10', guideTeacher: 'Por asignar' },
+  { id: 'sec-4b', year: '4to Año', section: 'B', name: '4to Año - Sección B', capacity: 35, classroom: 'Aula 11', guideTeacher: 'Por asignar' },
+  { id: 'sec-4c', year: '4to Año', section: 'C', name: '4to Año - Sección C', capacity: 35, classroom: 'Aula 12', guideTeacher: 'Por asignar' },
+  { id: 'sec-5a', year: '5to Año', section: 'A', name: '5to Año - Sección A', capacity: 35, classroom: 'Aula 13', guideTeacher: 'Por asignar' },
+  { id: 'sec-5b', year: '5to Año', section: 'B', name: '5to Año - Sección B', capacity: 35, classroom: 'Aula 14', guideTeacher: 'Por asignar' },
+  { id: 'sec-5c', year: '5to Año', section: 'C', name: '5to Año - Sección C', capacity: 35, classroom: 'Aula 15', guideTeacher: 'Por asignar' },
+];
+
+// Initial classrooms
+export const initialClassrooms = [
+  { id: 'clr-1', name: 'Aula 01', building: 'Edificio Central', capacity: 35, status: 'disponible' },
+  { id: 'clr-2', name: 'Aula 02', building: 'Edificio Central', capacity: 35, status: 'disponible' },
+  { id: 'clr-3', name: 'Aula 03', building: 'Edificio Central', capacity: 35, status: 'disponible' },
+  { id: 'clr-4', name: 'Aula 04', building: 'Edificio Central', capacity: 35, status: 'disponible' },
+  { id: 'clr-5', name: 'Aula 05', building: 'Edificio Central', capacity: 35, status: 'disponible' },
+  { id: 'clr-6', name: 'Laboratorio de Ciencias', building: 'Módulo de Ciencias', capacity: 30, status: 'disponible' },
+  { id: 'clr-7', name: 'Cancha Múltiple', building: 'Área Deportiva', capacity: 80, status: 'disponible' },
+];
+
+// All other dynamic tables start empty for real operations
 export const initialSubjects = [];
 export const initialStudents = [];
 export const initialTeachersList = [];
-export const initialClassrooms = [];
 export const initialGrades = [];
 export const initialEvaluationPlans = [];
 export const initialSchedules = [];

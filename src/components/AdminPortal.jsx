@@ -20,7 +20,16 @@ import {
   CalendarOff,
   Bell,
   Search,
-  ExternalLink
+  Key,
+  Lock,
+  Mail,
+  UserPlus,
+  Copy,
+  Layers,
+  ArrowUpRight,
+  AlertTriangle,
+  RotateCcw,
+  Sparkles
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import CertificateModal from './CertificateModal';
@@ -30,7 +39,16 @@ export default function AdminPortal() {
   const {
     currentUser,
     institution,
+    adminUser,
+    updateAdminCredentials,
     students,
+    enrollStudent,
+    deleteStudent,
+    promoteSchoolYear,
+    emptyStudentsDatabase,
+    sections,
+    addSection,
+    deleteSection,
     teachersList,
     addTeacher,
     updateTeacher,
@@ -54,16 +72,66 @@ export default function AdminPortal() {
     grades,
     announcements,
     addAnnouncement,
-    setActiveTab,
     notify
   } = useApp();
 
-  const [activeSubTab, setActiveSubTab] = useState('payments'); // 'payments', 'subjects', 'schedules', 'certificates', 'teachers', 'students', 'classrooms'
+  const [activeSubTab, setActiveSubTab] = useState('students'); // 'students', 'sections', 'teachers', 'subjects', 'schedules', 'certificates', 'payments', 'classrooms', 'settings'
   const [paymentFilter, setPaymentFilter] = useState('all');
 
   // Preview modals
   const [previewCert, setPreviewCert] = useState(null);
   const [previewReportCardStudent, setPreviewReportCardStudent] = useState(null);
+
+  // Requisito 5: Student Enrollment Modal
+  const [enrollModalOpen, setEnrollModalOpen] = useState(false);
+  const [enrollForm, setEnrollForm] = useState({
+    firstName: '',
+    lastName: '',
+    cedula: '',
+    gradeYear: '1er Año',
+    sectionLetter: 'Sección A',
+    email: '',
+    password: '',
+    representativeName: '',
+    phone: ''
+  });
+
+  // Access Credentials Card Modal
+  const [selectedAccessStudent, setSelectedAccessStudent] = useState(null);
+
+  // Requisito 9: Confirmation Modals for Promote and Wipe
+  const [promoteConfirmOpen, setPromoteConfirmOpen] = useState(false);
+  const [wipeConfirmOpen, setWipeConfirmOpen] = useState(false);
+
+  // Requisito 4: Section Modal
+  const [sectionModalOpen, setSectionModalOpen] = useState(false);
+  const [sectionForm, setSectionForm] = useState({
+    year: '1er Año',
+    section: 'A',
+    capacity: 35,
+    classroom: classrooms[0]?.name || 'Aula 01',
+    guideTeacher: teachersList[0]?.name || 'Por asignar'
+  });
+
+  // Requisito 6: Teacher Modal
+  const [teacherModalOpen, setTeacherModalOpen] = useState(false);
+  const [editingTeacherId, setEditingTeacherId] = useState(null);
+  const [teacherForm, setTeacherForm] = useState({
+    name: '',
+    cedula: '',
+    email: '',
+    specialty: 'Castellano y Literatura',
+    phone: '',
+    password: 'docente123'
+  });
+
+  // Requisito 8: Admin Security Credentials State
+  const [adminCredForm, setAdminCredForm] = useState({
+    email: adminUser.email,
+    password: adminUser.password || '',
+    name: adminUser.name,
+    phone: adminUser.phone || ''
+  });
 
   // Subject Form State
   const [subjectModalOpen, setSubjectModalOpen] = useState(false);
@@ -71,20 +139,21 @@ export default function AdminPortal() {
   const [subjectForm, setSubjectForm] = useState({
     name: '',
     code: '',
-    gradeLevel: '4to Año',
-    teacherName: '',
-    color: '#2563eb'
+    gradeLevel: '1er Año',
+    teacherName: teachersList[0]?.name || '',
+    color: '#223C63'
   });
 
-  // Schedule Block Form State (Supports Regular, Recess, Day Off)
+  // Schedule Block Form State
   const [schedModalOpen, setSchedModalOpen] = useState(false);
   const [schedType, setSchedType] = useState('regular'); // 'regular', 'recess', 'day_off'
   const [schedForm, setSchedForm] = useState({
     day: 'Lunes',
     time: '07:00 - 08:30 AM',
     subject: subjects[0]?.name || '',
-    classroom: classrooms[0]?.name || '',
+    classroom: classrooms[0]?.name || 'Aula 01',
     teacher: teachersList[0]?.name || '',
+    gradeLevel: '1er Año - Sección A',
     notes: ''
   });
 
@@ -94,133 +163,43 @@ export default function AdminPortal() {
   const [certForm, setCertForm] = useState({
     studentId: students[0]?.id || '',
     studentName: students[0]?.name || '',
-    studentIdNumber: students[0]?.studentIdNumber || '',
-    gradeLevel: students[0]?.gradeLevel || '4to Año',
+    studentIdNumber: students[0]?.cedula || '',
+    gradeLevel: students[0]?.grade_year || '1er Año',
     category: 'recognition', // 'grade' or 'recognition'
     template_type: 'academic', // 'academic', 'sports', 'anniversary', 'values'
-    title: 'Diploma de Honor al Rendimiento Académico',
-    scoreNote: '',
-    description: 'Otorgado en reconocimiento a su sobresaliente dedicación y méritos académicos.'
+    title: 'Certificado de Excelencia Académica',
+    scoreNote: '19.50',
+    description: 'Por haber alcanzado el más alto promedio de notas durante el período escolar.'
   });
 
-  // Teacher Form State
-  const [teacherModalOpen, setTeacherModalOpen] = useState(false);
-  const [editingTeacherId, setEditingTeacherId] = useState(null);
-  const [teacherForm, setTeacherForm] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    department: 'Ciencias Exactas',
-    subjects: ''
-  });
+  const activeYear = institution.currentSchoolYear || '2027-2028';
 
-  // Classroom Form State
-  const [classroomModalOpen, setClassroomModalOpen] = useState(false);
-  const [classroomForm, setClassroomForm] = useState({
-    name: '',
-    code: '',
-    capacity: 35,
-    floor: 'Planta Baja'
-  });
-
-  // Handlers for Subjects
-  const handleOpenSubjectModal = (sub = null) => {
-    if (sub) {
-      setEditingSubId(sub.id);
-      setSubjectForm({ ...sub });
-    } else {
-      setEditingSubId(null);
-      setSubjectForm({
-        name: '',
-        code: '',
-        gradeLevel: '4to Año',
-        teacherName: teachersList[0]?.name || '',
-        color: '#2563eb'
-      });
-    }
-    setSubjectModalOpen(true);
-  };
-
-  const handleSaveSubject = async (e) => {
+  // Handler for enrolling student (Requisito 5)
+  const handleEnrollSubmit = (e) => {
     e.preventDefault();
-    if (editingSubId) {
-      await updateSubject(editingSubId, subjectForm);
-    } else {
-      await addSubject(subjectForm);
-    }
-    setSubjectModalOpen(false);
-  };
-
-  // Handlers for Schedules
-  const handleSaveSchedule = async (e) => {
-    e.preventDefault();
-    let title = schedForm.subject;
-    let place = schedForm.classroom;
-
-    if (schedType === 'day_off') {
-      title = 'Día Libre Escolar';
-      place = 'Sin actividad';
-    } else if (schedType === 'recess') {
-      title = 'Receso Escolar';
-      place = 'Áreas comunes';
+    if (!enrollForm.cedula || !enrollForm.email || !enrollForm.password) {
+      notify('Por favor completa todos los campos requeridos', 'error');
+      return;
     }
 
-    await addScheduleBlock({
-      day: schedForm.day,
-      time: schedForm.time,
-      subject: title,
-      classroom: place,
-      teacher: schedType === 'regular' ? schedForm.teacher : 'Dirección',
-      entry_type: schedType,
-      notes: schedForm.notes
+    const createdStudent = enrollStudent(enrollForm);
+    setEnrollModalOpen(false);
+    setSelectedAccessStudent(createdStudent);
+    setEnrollForm({
+      firstName: '',
+      lastName: '',
+      cedula: '',
+      gradeYear: '1er Año',
+      sectionLetter: 'Sección A',
+      email: '',
+      password: '',
+      representativeName: '',
+      phone: ''
     });
-    setSchedModalOpen(false);
   };
 
-  // Handlers for Certificates
-  const handleOpenCertModal = (cert = null) => {
-    if (cert) {
-      setEditingCertId(cert.id);
-      setCertForm({
-        studentId: cert.studentId || '',
-        studentName: cert.studentName || cert.student_name || '',
-        studentIdNumber: cert.studentIdNumber || cert.student_id_number || '',
-        gradeLevel: cert.gradeLevel || cert.grade_level || '4to Año',
-        category: cert.category || 'recognition',
-        template_type: cert.template_type || 'academic',
-        title: cert.title || 'Diploma Oficial',
-        scoreNote: cert.scoreNote || cert.score_note || '',
-        description: cert.description || ''
-      });
-    } else {
-      setEditingCertId(null);
-      setCertForm({
-        studentId: students[0]?.id || '',
-        studentName: students[0]?.name || '',
-        studentIdNumber: students[0]?.studentIdNumber || '',
-        gradeLevel: students[0]?.gradeLevel || '4to Año',
-        category: 'recognition',
-        template_type: 'academic',
-        title: 'Certificado de Excelencia Académica',
-        scoreNote: '19.5 pts',
-        description: 'En reconocimiento por su destacada dedicación y rendimiento escolar.'
-      });
-    }
-    setCertModalOpen(true);
-  };
-
-  const handleSaveCert = async (e) => {
-    e.preventDefault();
-    if (editingCertId) {
-      await updateCertificate(editingCertId, certForm);
-    } else {
-      await addCertificate(certForm);
-    }
-    setCertModalOpen(false);
-  };
-
-  // Handlers for Teachers
-  const handleSaveTeacher = (e) => {
+  // Handler for creating / updating teacher (Requisito 6)
+  const handleTeacherSubmit = (e) => {
     e.preventDefault();
     if (editingTeacherId) {
       updateTeacher(editingTeacherId, teacherForm);
@@ -228,533 +207,432 @@ export default function AdminPortal() {
       addTeacher(teacherForm);
     }
     setTeacherModalOpen(false);
+    setEditingTeacherId(null);
+    setTeacherForm({
+      name: '',
+      cedula: '',
+      email: '',
+      specialty: 'Castellano y Literatura',
+      phone: '',
+      password: 'docente123'
+    });
   };
 
-  // Handlers for Classrooms
-  const handleSaveClassroom = (e) => {
+  // Handler for adding section (Requisito 4)
+  const handleSectionSubmit = (e) => {
     e.preventDefault();
-    addClassroom(classroomForm);
-    setClassroomModalOpen(false);
+    addSection(sectionForm);
+    setSectionModalOpen(false);
   };
 
-  const filteredPayments =
-    paymentFilter === 'all'
-      ? payments
-      : payments.filter((p) => p.status === paymentFilter);
+  // Handler for updating admin credentials (Requisito 8)
+  const handleAdminCredSubmit = (e) => {
+    e.preventDefault();
+    updateAdminCredentials(adminCredForm);
+  };
+
+  // Handler for certificates
+  const handleCertSubmit = (e) => {
+    e.preventDefault();
+    if (editingCertId) {
+      updateCertificate(editingCertId, certForm);
+    } else {
+      addCertificate(certForm);
+    }
+    setCertModalOpen(false);
+    setEditingCertId(null);
+  };
+
+  // When selecting a student in Certificate form, auto-fill cedula and grade
+  const handleStudentSelectInCert = (studentId) => {
+    const found = students.find((s) => s.id === studentId);
+    if (found) {
+      setCertForm((prev) => ({
+        ...prev,
+        studentId: found.id,
+        studentName: found.name,
+        studentIdNumber: found.cedula || '',
+        gradeLevel: `${found.grade_year || found.gradeLevel || '1er Año'} (${found.section || 'Sección A'})`
+      }));
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 pb-20">
-      {/* 1. Header Banner */}
-      <div className="bg-slate-900/80 border-b border-slate-800/80 pt-8 pb-14 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-2 text-xs text-slate-400 mb-4">
-            <button onClick={() => setActiveTab('home')} className="hover:text-white transition">
-              Inicio
+    <div className="min-h-screen denim-pattern text-slate-100 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Top Header Panel (Denim Craft Frame) */}
+        <div className="denim-card p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-[#223C63] border-2 border-[#DCB35C] flex items-center justify-center text-[#DCB35C] shadow-lg">
+              <ShieldCheck className="w-8 h-8 text-[#DCB35C]" />
+            </div>
+            <div>
+              <div className="inline-flex items-center gap-2 denim-patch px-2.5 py-0.5 text-[11px] mb-1">
+                <Sparkles className="w-3 h-3 text-[#DCB35C]" />
+                <span>Despacho de Dirección General</span>
+                <span className="text-slate-500">•</span>
+                <span className="text-white font-semibold">Año Escolar {activeYear}</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-black font-slab text-white tracking-tight">
+                Control de Estudios y Gestión Central
+              </h1>
+              <p className="text-xs text-slate-300">
+                Director: <strong className="text-white">{institution.principal}</strong> • {institution.name}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              onClick={() => setEnrollModalOpen(true)}
+              className="px-4 py-2.5 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] hover:brightness-105 text-[#1A2B45] font-bold font-slab rounded-xl text-xs flex items-center gap-2 shadow-md transition cursor-pointer"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>Matricular Estudiante</span>
             </button>
-            <ChevronRight className="w-3.5 h-3.5" />
-            <span className="text-white font-medium">Panel de Dirección y Control de Estudios</span>
-          </div>
-
-          <div className="glass-surface p-6 sm:p-7 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300">
-                <ShieldCheck className="w-8 h-8 text-blue-400" />
-              </div>
-              <div>
-                <span className="px-2.5 py-0.5 rounded-md bg-blue-500/15 text-blue-300 text-[11px] font-semibold border border-blue-400/20 inline-block mb-1">
-                  Dirección General ({institution.adminEmail})
-                </span>
-                <h1 className="text-2xl sm:text-3xl font-bold font-heading text-white">
-                  Larry González • Dirección General
-                </h1>
-                <p className="text-xs text-slate-400">
-                  {institution.name} • Barcelona, Estado Anzoátegui
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-4 gap-2.5 text-center w-full md:w-auto">
-              <div className="glass-surface-subtle px-3.5 py-2.5 rounded-xl text-center">
-                <div className="text-lg font-bold font-heading text-white">{subjects.length}</div>
-                <div className="text-[10px] text-slate-400 uppercase font-medium">Materias</div>
-              </div>
-              <div className="glass-surface-subtle px-3.5 py-2.5 rounded-xl text-center">
-                <div className="text-lg font-bold font-heading text-white">{teachersList.length}</div>
-                <div className="text-[10px] text-slate-400 uppercase font-medium">Docentes</div>
-              </div>
-              <div className="glass-surface-subtle px-3.5 py-2.5 rounded-xl text-center">
-                <div className="text-lg font-bold font-heading text-amber-400">
-                  {payments.filter((p) => p.status === 'pending').length}
-                </div>
-                <div className="text-[10px] text-slate-400 uppercase font-medium">Pagos Pend.</div>
-              </div>
-              <div className="glass-surface-subtle px-3.5 py-2.5 rounded-xl text-center">
-                <div className="text-lg font-bold font-heading text-blue-400">{certificates.length}</div>
-                <div className="text-[10px] text-slate-400 uppercase font-medium">Diplomas</div>
-              </div>
-            </div>
+            <button
+              onClick={() => setActiveSubTab('settings')}
+              className="px-3.5 py-2.5 bg-[#101c30] hover:bg-[#1A2B45] text-slate-300 hover:text-white border border-stitch-subtle rounded-xl text-xs font-bold font-slab flex items-center gap-1.5 transition cursor-pointer"
+            >
+              <Key className="w-3.5 h-3.5 text-[#DCB35C]" />
+              <span>Seguridad de Dirección</span>
+            </button>
           </div>
         </div>
-      </div>
 
-      {/* 2. Subtabs Navigation Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6">
-        <div className="glass-surface rounded-xl p-1 flex gap-1 overflow-x-auto text-xs font-semibold shadow-md">
-          <button
-            onClick={() => setActiveSubTab('payments')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
-              activeSubTab === 'payments' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <CreditCard className="w-4 h-4" />
-            <span>Auditoría de Pagos ({payments.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('subjects')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
-              activeSubTab === 'subjects' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <BookOpen className="w-4 h-4" />
-            <span>Gestión de Asignaturas ({subjects.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('schedules')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
-              activeSubTab === 'schedules' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <Calendar className="w-4 h-4" />
-            <span>Horarios, Recesos y Días Libres</span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('certificates')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
-              activeSubTab === 'certificates' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <Award className="w-4 h-4" />
-            <span>Emisión de Certificados ({certificates.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('teachers')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
-              activeSubTab === 'teachers' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span>Nómina de Profesores ({teachersList.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('students')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
-              activeSubTab === 'students' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <GraduationCap className="w-4 h-4" />
-            <span>Censo Estudiantil ({students.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('classrooms')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
-              activeSubTab === 'classrooms' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <Building className="w-4 h-4" />
-            <span>Sistema de Aulas ({classrooms.length})</span>
-          </button>
+        {/* Sub-Tabs Navigation */}
+        <div className="flex flex-wrap gap-2 border-b border-slate-700/60 pb-3 text-xs font-medium">
+          {[
+            { id: 'students', label: `Nómina Estudiantes (${students.length})`, icon: GraduationCap },
+            { id: 'sections', label: `Secciones (${sections.length})`, icon: Layers },
+            { id: 'teachers', label: `Docentes (${teachersList.length})`, icon: Users },
+            { id: 'subjects', label: `Asignaturas (${subjects.length})`, icon: BookOpen },
+            { id: 'schedules', label: 'Horarios & Días Libres', icon: Clock },
+            { id: 'certificates', label: `Certificados (${certificates.length})`, icon: Award },
+            { id: 'payments', label: `Pagos & Solvencias (${payments.length})`, icon: CreditCard },
+            { id: 'classrooms', label: `Aulas (${classrooms.length})`, icon: Building },
+            { id: 'settings', label: 'Ajustes de Dirección', icon: Key },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeSubTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveSubTab(tab.id)}
+                className={`px-3.5 py-2 rounded-xl transition flex items-center gap-2 cursor-pointer ${
+                  isActive
+                    ? 'bg-[#223C63] text-white font-bold font-slab border border-[#DCB35C]/50 shadow-inner'
+                    : 'bg-[#152338]/80 text-slate-300 hover:text-white hover:bg-[#1A2B45] border border-slate-700/60'
+                }`}
+              >
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#DCB35C]' : 'text-slate-400'}`} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
-      </div>
 
-      {/* 3. Main Workspace */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-        {/* TAB 1: AUDITORÍA DE PAGOS */}
-        {activeSubTab === 'payments' && (
-          <div className="glass-card p-6 rounded-2xl space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        {/* ============================================================== */}
+        {/* PESTAÑA: NÓMINA DE ESTUDIANTES (Requisitos 5 y 9)              */}
+        {/* ============================================================== */}
+        {activeSubTab === 'students' && (
+          <div className="space-y-6 animate-fade-in">
+            <div className="denim-card p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div>
-                <h2 className="text-base font-bold font-heading text-white">
-                  Auditoría y Validación de Pagos
-                </h2>
+                <h2 className="text-base font-bold font-slab text-white">Nómina Oficial de Estudiantes</h2>
                 <p className="text-xs text-slate-400">
-                  Concilia los pagos reportados por los representantes y actualiza su solvencia
+                  Matrícula regular y control de expedientes para el <strong>Año Escolar {activeYear}</strong>
                 </p>
               </div>
 
-              <div className="flex gap-2 text-xs">
-                {['all', 'pending', 'approved', 'rejected'].map((st) => (
+              {/* Action Buttons for Students (Requisito 9: Subir de año y Vaciar BD) */}
+              <div className="flex flex-wrap items-center gap-2.5">
+                <button
+                  onClick={() => setEnrollModalOpen(true)}
+                  className="px-3.5 py-2 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab text-xs rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>Matricular Alumno</span>
+                </button>
+
+                <button
+                  onClick={() => setPromoteConfirmOpen(true)}
+                  className="px-3.5 py-2 bg-[#223C63] hover:bg-[#1A2B45] text-white border border-[#DCB35C]/40 font-bold font-slab text-xs rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer"
+                  title="Promueve a los alumnos al año siguiente y avanza el año escolar"
+                >
+                  <ArrowUpRight className="w-4 h-4 text-[#f0c36d]" />
+                  <span>Subir de Año Escolar</span>
+                </button>
+
+                <button
+                  onClick={() => setWipeConfirmOpen(true)}
+                  className="px-3.5 py-2 bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-500/40 font-bold font-slab text-xs rounded-xl shadow-md flex items-center gap-1.5 cursor-pointer"
+                  title="Vacía la base de datos de estudiantes para un reinicio limpio"
+                >
+                  <Trash2 className="w-4 h-4 text-rose-400" />
+                  <span>Vaciar Base de Datos</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Students Table */}
+            <div className="denim-card overflow-hidden">
+              {students.length === 0 ? (
+                <div className="p-12 text-center">
+                  <GraduationCap className="w-10 h-10 text-slate-500 mx-auto mb-3" />
+                  <div className="font-bold text-white text-base font-slab">No hay estudiantes matriculados</div>
+                  <p className="text-xs text-slate-400 max-w-md mx-auto mt-1 mb-4">
+                    La matrícula está en cero. Registra manualmente a cada alumno para generar sus credenciales oficiales.
+                  </p>
                   <button
-                    key={st}
-                    onClick={() => setPaymentFilter(st)}
-                    className={`px-3 py-1.5 rounded-lg font-medium transition capitalize ${
-                      paymentFilter === st ? 'bg-blue-600 text-white' : 'bg-slate-900 text-slate-400 hover:text-white'
-                    }`}
+                    onClick={() => setEnrollModalOpen(true)}
+                    className="px-4 py-2 bg-[#DCB35C] text-[#1A2B45] font-bold font-slab text-xs rounded-xl"
                   >
-                    {st === 'all' ? 'Todos' : st === 'pending' ? 'Pendientes' : st === 'approved' ? 'Aprobados' : 'Rechazados'}
+                    Matricular Primer Alumno
                   </button>
-                ))}
-              </div>
-            </div>
-
-            {filteredPayments.length === 0 ? (
-              <div className="p-10 text-center text-xs text-slate-500 italic">
-                No hay pagos registrados bajo este filtro.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
-                      <th className="py-2.5 px-3">Representante / Alumno</th>
-                      <th className="py-2.5 px-3">Concepto</th>
-                      <th className="py-2.5 px-3">Método & Referencia</th>
-                      <th className="py-2.5 px-3 text-right">Monto</th>
-                      <th className="py-2.5 px-3 text-center">Estado</th>
-                      <th className="py-2.5 px-3 text-right">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/80">
-                    {filteredPayments.map((p) => (
-                      <tr key={p.id} className="hover:bg-slate-800/40">
-                        <td className="py-3 px-3">
-                          <div className="font-bold text-white">{p.representativeName}</div>
-                          <div className="text-[11px] text-slate-400">{p.studentName}</div>
-                        </td>
-                        <td className="py-3 px-3 text-slate-200">{p.paymentConcept}</td>
-                        <td className="py-3 px-3">
-                          <div className="text-slate-300">{p.paymentMethod}</div>
-                          <div className="text-[11px] font-mono text-slate-400">Ref: {p.referenceNumber}</div>
-                          {p.receiptUrl && (
-                            <a
-                              href={p.receiptUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-[10px] text-blue-400 hover:underline flex items-center gap-1 mt-0.5"
-                            >
-                              <span>Ver comprobante</span>
-                              <ExternalLink className="w-3 h-3" />
-                            </a>
-                          )}
-                        </td>
-                        <td className="py-3 px-3 text-right font-bold text-white font-mono">
-                          ${Number(p.amount).toFixed(2)}
-                        </td>
-                        <td className="py-3 px-3 text-center">
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              p.status === 'approved'
-                                ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
-                                : p.status === 'rejected'
-                                ? 'bg-rose-950 text-rose-300 border border-rose-800'
-                                : 'bg-amber-950 text-amber-300 border border-amber-800'
-                            }`}
-                          >
-                            {p.status === 'approved' ? 'Aprobado' : p.status === 'rejected' ? 'Rechazado' : 'Pendiente'}
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 text-right space-x-1.5">
-                          {p.status !== 'approved' && (
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-[#101c30] text-[#f0c36d] border-b border-slate-700/80">
+                      <tr>
+                        <th className="py-3 px-4 font-slab">Estudiante</th>
+                        <th className="py-3 px-4 font-slab">Cédula de Identidad</th>
+                        <th className="py-3 px-4 font-slab">Año y Sección</th>
+                        <th className="py-3 px-4 font-slab">Representante / Contacto</th>
+                        <th className="py-3 px-4 font-slab">Credenciales de Acceso</th>
+                        <th className="py-3 px-4 text-right font-slab">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800">
+                      {students.map((stu) => (
+                        <tr key={stu.id} className="hover:bg-[#1A2B45]/60 transition">
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={stu.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'}
+                                alt=""
+                                className="w-8 h-8 rounded-lg object-cover border border-slate-700"
+                              />
+                              <div>
+                                <div className="font-bold text-white font-slab">{stu.name}</div>
+                                <div className="text-[11px] text-slate-400 font-mono">{stu.email}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 font-mono font-bold text-[#f0c36d]">
+                            {stu.cedula || 'Pendiente'}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className="denim-patch px-2 py-0.5 text-[10px]">
+                              {stu.grade_year || stu.gradeLevel} - {stu.section || 'Sección A'}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <div className="text-white font-medium">{stu.representativeName || 'Por asignar'}</div>
+                            <div className="text-[11px] text-slate-400">{stu.phone || 'Sin teléfono'}</div>
+                          </td>
+                          <td className="py-3.5 px-4">
                             <button
-                              onClick={() => updatePaymentStatus(p.id, 'approved', 'Conciliado en cuenta por Dirección')}
-                              className="p-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded"
-                              title="Aprobar pago"
+                              onClick={() => setSelectedAccessStudent(stu)}
+                              className="px-2.5 py-1 bg-[#101c30] hover:bg-[#223C63] text-[#DCB35C] border border-[#DCB35C]/30 rounded-lg text-[11px] font-mono flex items-center gap-1.5 transition cursor-pointer"
                             >
-                              <Check className="w-3.5 h-3.5" />
+                              <Key className="w-3 h-3" />
+                              <span>Ficha de Credencial</span>
                             </button>
-                          )}
-                          {p.status !== 'rejected' && (
-                            <button
-                              onClick={() => updatePaymentStatus(p.id, 'rejected', 'Referencia bancaria no encontrada')}
-                              className="p-1.5 bg-rose-700 hover:bg-rose-600 text-white rounded"
-                              title="Rechazar pago"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => setPreviewReportCardStudent(stu)}
+                                title="Ver Boletín"
+                                className="p-1.5 text-slate-400 hover:text-[#f0c36d] hover:bg-[#101c30] rounded-lg transition cursor-pointer"
+                              >
+                                <Printer className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => deleteStudent(stu.id)}
+                                title="Retirar Alumno"
+                                className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-950/30 rounded-lg transition cursor-pointer"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {/* TAB 2: GESTIÓN DE ASIGNATURAS (Zero mock, full dynamic database) */}
-        {activeSubTab === 'subjects' && (
-          <div className="glass-card p-6 rounded-2xl space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        {/* ============================================================== */}
+        {/* PESTAÑA: GESTIÓN DE SECCIONES (Requisito 4)                    */}
+        {/* ============================================================== */}
+        {activeSubTab === 'sections' && (
+          <div className="space-y-6 animate-fade-in">
+            <div className="denim-card p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-base font-bold font-heading text-white">
-                  Catálogo Oficial de Asignaturas
-                </h2>
+                <h2 className="text-base font-bold font-slab text-white">Secciones Oficiales del Plantel</h2>
                 <p className="text-xs text-slate-400">
-                  Agrega asignatura por asignatura a la base de datos de la institución
+                  Estructura de Educación Media General: desde <strong>1er Año Sección A</strong> hasta <strong>5to Año Sección C</strong>
                 </p>
               </div>
-
               <button
-                onClick={() => handleOpenSubjectModal()}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition shadow-xs"
+                onClick={() => setSectionModalOpen(true)}
+                className="px-4 py-2.5 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab text-xs rounded-xl shadow-md flex items-center gap-2 cursor-pointer"
               >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Agregar Asignatura</span>
+                <Plus className="w-4 h-4" />
+                <span>Agregar Sección</span>
               </button>
             </div>
 
-            {subjects.length === 0 ? (
-              <div className="p-12 text-center text-xs text-slate-500 italic">
-                No hay asignaturas en la base de datos. Haz clic en "Agregar Asignatura" para registrar la primera.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
-                      <th className="py-2.5 px-3">Código</th>
-                      <th className="py-2.5 px-3">Nombre de la Asignatura</th>
-                      <th className="py-2.5 px-3">Nivel / Año</th>
-                      <th className="py-2.5 px-3">Profesor Asignado</th>
-                      <th className="py-2.5 px-3 text-right">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/80">
-                    {subjects.map((sub) => (
-                      <tr key={sub.id} className="hover:bg-slate-800/40">
-                        <td className="py-3 px-3 font-mono text-blue-400 font-semibold">{sub.code || '—'}</td>
-                        <td className="py-3 px-3 font-bold text-white">{sub.name}</td>
-                        <td className="py-3 px-3 text-slate-300">{sub.gradeLevel || '4to Año'}</td>
-                        <td className="py-3 px-3 text-slate-400">{sub.teacherName || 'Por asignar'}</td>
-                        <td className="py-3 px-3 text-right space-x-1">
-                          <button
-                            onClick={() => handleOpenSubjectModal(sub)}
-                            className="p-1.5 text-blue-400 hover:bg-slate-800 rounded"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => deleteSubject(sub.id)}
-                            className="p-1.5 text-rose-400 hover:bg-slate-800 rounded"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {sections.map((sec) => {
+                const enrolledCount = students.filter(
+                  (s) => (s.grade_year === sec.year || s.gradeLevel === sec.year) && s.section === `Sección ${sec.section}`
+                ).length;
 
-        {/* TAB 3: HORARIOS, RECESOS Y DÍAS LIBRES */}
-        {activeSubTab === 'schedules' && (
-          <div className="glass-card p-6 rounded-2xl space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-base font-bold font-heading text-white">
-                  Programación de Horarios, Recesos y Días Libres
-                </h2>
-                <p className="text-xs text-slate-400">
-                  Establece bloques de clases regulares, recesos o marca días libres institucionales
-                </p>
-              </div>
+                return (
+                  <div key={sec.id} className="denim-card p-5 space-y-3 relative group">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="denim-patch px-2 py-0.5 text-[10px]">{sec.year}</span>
+                        <h3 className="text-lg font-bold font-slab text-white mt-1">Sección {sec.section}</h3>
+                      </div>
+                      <button
+                        onClick={() => deleteSection(sec.id)}
+                        className="p-1 text-slate-500 hover:text-rose-400 rounded-lg transition opacity-0 group-hover:opacity-100"
+                        title="Eliminar Sección"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
 
-              <button
-                onClick={() => setSchedModalOpen(true)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition shadow-xs"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Añadir Bloque al Horario</span>
-              </button>
+                    <div className="space-y-1.5 text-xs text-slate-300 pt-2 border-t border-slate-700/60">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Aula Asignada:</span>
+                        <strong className="text-white">{sec.classroom}</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Profesor Guía:</span>
+                        <strong className="text-[#f0c36d]">{sec.guideTeacher}</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Capacidad Máxima:</span>
+                        <span>{sec.capacity} alumnos</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Matriculados:</span>
+                        <span className="font-bold text-white">{enrolledCount} alumnos</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-
-            {schedules.length === 0 ? (
-              <div className="p-12 text-center text-xs text-slate-500 italic">
-                El horario está vacío. Agrega clases, recesos escolares o días libres.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
-                      <th className="py-2.5 px-3">Día</th>
-                      <th className="py-2.5 px-3">Horario</th>
-                      <th className="py-2.5 px-3">Tipo de Entrada</th>
-                      <th className="py-2.5 px-3">Materia / Actividad</th>
-                      <th className="py-2.5 px-3">Aula Asignada</th>
-                      <th className="py-2.5 px-3">Docente</th>
-                      <th className="py-2.5 px-3 text-right">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/80">
-                    {schedules.map((sc) => (
-                      <tr key={sc.id} className="hover:bg-slate-800/40">
-                        <td className="py-3 px-3 font-bold text-white">{sc.day || sc.day_of_week}</td>
-                        <td className="py-3 px-3 font-mono text-slate-300">{sc.time}</td>
-                        <td className="py-3 px-3">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                              sc.entry_type === 'day_off'
-                                ? 'bg-blue-950 text-blue-300 border border-blue-800'
-                                : sc.entry_type === 'recess'
-                                ? 'bg-amber-950 text-amber-300 border border-amber-800'
-                                : sc.entry_type === 'free_module'
-                                ? 'bg-slate-800 text-slate-300'
-                                : 'bg-slate-900 text-slate-200'
-                            }`}
-                          >
-                            {sc.entry_type === 'day_off'
-                              ? 'Día Libre'
-                              : sc.entry_type === 'recess'
-                              ? 'Receso'
-                              : sc.entry_type === 'free_module'
-                              ? 'Módulo Libre'
-                              : 'Clase Regular'}
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 font-medium text-white">{sc.subject}</td>
-                        <td className="py-3 px-3 text-slate-400">{sc.classroom}</td>
-                        <td className="py-3 px-3 text-slate-400">{sc.teacher}</td>
-                        <td className="py-3 px-3 text-right">
-                          <button
-                            onClick={() => deleteScheduleBlock(sc.id)}
-                            className="p-1.5 text-rose-400 hover:bg-slate-800 rounded"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
           </div>
         )}
 
-        {/* TAB 4: CERTIFICADOS Y MODELOS AUTOMÁTICOS */}
-        {activeSubTab === 'certificates' && (
-          <div className="glass-card p-6 rounded-2xl space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-base font-bold font-heading text-white">
-                  Emisión y Edición de Certificados Oficiales
-                </h2>
-                <p className="text-xs text-slate-400">
-                  Modelos de Excelencia Académica, Deportes, Aniversario y Valores con diseño oficial imprimible
-                </p>
-              </div>
-
-              <button
-                onClick={() => handleOpenCertModal()}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition shadow-xs"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Emitir Certificado a Alumno</span>
-              </button>
-            </div>
-
-            {certificates.length === 0 ? (
-              <div className="p-12 text-center text-xs text-slate-500 italic">
-                No hay certificados emitidos. El administrador puede asignarlos individualmente con modelos automáticos.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
-                      <th className="py-2.5 px-3">Código</th>
-                      <th className="py-2.5 px-3">Estudiante</th>
-                      <th className="py-2.5 px-3">Título / Modelo</th>
-                      <th className="py-2.5 px-3">Categoría</th>
-                      <th className="py-2.5 px-3">Fecha</th>
-                      <th className="py-2.5 px-3 text-right">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/80">
-                    {certificates.map((c) => (
-                      <tr key={c.id} className="hover:bg-slate-800/40">
-                        <td className="py-3 px-3 font-mono text-slate-400 text-[11px]">{c.certificate_code || c.code}</td>
-                        <td className="py-3 px-3 font-bold text-white">{c.studentName || c.student_name}</td>
-                        <td className="py-3 px-3 text-slate-200">{c.title}</td>
-                        <td className="py-3 px-3">
-                          <span className="px-2 py-0.5 rounded text-[10px] bg-blue-950 text-blue-300 border border-blue-800">
-                            {c.category === 'grade' ? `Nota: ${c.scoreNote || c.score_note}` : 'Reconocimiento'}
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 text-slate-400">{c.issue_date || c.issueDate}</td>
-                        <td className="py-3 px-3 text-right space-x-1.5">
-                          <button
-                            onClick={() => setPreviewCert(c)}
-                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded text-[11px]"
-                          >
-                            Imprimir
-                          </button>
-                          <button
-                            onClick={() => handleOpenCertModal(c)}
-                            className="p-1 text-blue-400 hover:bg-slate-800 rounded"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => deleteCertificate(c.id)}
-                            className="p-1 text-rose-400 hover:bg-slate-800 rounded"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TAB 5: NÓMINA DE PROFESORES */}
+        {/* ============================================================== */}
+        {/* PESTAÑA: GESTIÓN DE DOCENTES (Requisito 6)                     */}
+        {/* ============================================================== */}
         {activeSubTab === 'teachers' && (
-          <div className="glass-card p-6 rounded-2xl space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-6 animate-fade-in">
+            <div className="denim-card p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-base font-bold font-heading text-white">Nómina Docente</h2>
-                <p className="text-xs text-slate-400">Registra y edita la plantilla de profesores</p>
+                <h2 className="text-base font-bold font-slab text-white">Nómina Docente del Plantel</h2>
+                <p className="text-xs text-slate-400">
+                  Profesores titulares para asignación de cátedras y horarios
+                </p>
               </div>
-
               <button
-                onClick={() => { setEditingTeacherId(null); setTeacherModalOpen(true); }}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition shadow-xs"
+                onClick={() => {
+                  setEditingTeacherId(null);
+                  setTeacherForm({
+                    name: '',
+                    cedula: '',
+                    email: '',
+                    specialty: 'Castellano y Literatura',
+                    phone: '',
+                    password: 'docente123'
+                  });
+                  setTeacherModalOpen(true);
+                }}
+                className="px-4 py-2.5 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab text-xs rounded-xl shadow-md flex items-center gap-2 cursor-pointer"
               >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Agregar Profesor</span>
+                <Plus className="w-4 h-4" />
+                <span>Registrar Nuevo Docente</span>
               </button>
             </div>
 
             {teachersList.length === 0 ? (
-              <div className="p-12 text-center text-xs text-slate-500 italic">
-                No hay profesores agregados a la nómina escolar.
+              <div className="denim-card p-12 text-center">
+                <Users className="w-10 h-10 text-slate-500 mx-auto mb-3" />
+                <div className="font-bold text-white text-base font-slab">No hay docentes registrados</div>
+                <p className="text-xs text-slate-400 max-w-md mx-auto mt-1 mb-4">
+                  Registra a los profesores de la institución para que puedan ser seleccionados en horarios y materias.
+                </p>
+                <button
+                  onClick={() => setTeacherModalOpen(true)}
+                  className="px-4 py-2 bg-[#DCB35C] text-[#1A2B45] font-bold font-slab text-xs rounded-xl"
+                >
+                  Registrar Primer Docente
+                </button>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {teachersList.map((t) => (
-                  <div key={t.id} className="p-4 rounded-xl border border-slate-800 bg-slate-900/60 flex justify-between text-xs">
-                    <div>
-                      <div className="font-bold text-white text-sm">{t.name}</div>
-                      <div className="text-slate-400 mt-0.5">{t.department}</div>
-                      <div className="text-slate-500 text-[11px] mt-2">{t.email} • {t.phone}</div>
+                  <div key={t.id} className="denim-card p-5 space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={t.avatar || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80'}
+                          alt=""
+                          className="w-11 h-11 rounded-xl object-cover border border-[#DCB35C]/50"
+                        />
+                        <div>
+                          <h3 className="font-bold text-white text-sm font-slab">{t.name}</h3>
+                          <div className="text-[11px] text-[#f0c36d] font-mono">C.I: {t.cedula || 'Pendiente'}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => {
+                            setEditingTeacherId(t.id);
+                            setTeacherForm({
+                              name: t.name,
+                              cedula: t.cedula || '',
+                              email: t.email,
+                              specialty: t.specialty || '',
+                              phone: t.phone || '',
+                              password: t.password || ''
+                            });
+                            setTeacherModalOpen(true);
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-[#DCB35C] rounded-lg transition"
+                          title="Editar"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => deleteTeacher(t.id)}
+                          className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg transition"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
-                    <button onClick={() => deleteTeacher(t.id)} className="text-rose-400 hover:text-rose-300">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+
+                    <div className="space-y-1 text-xs text-slate-300 pt-2 border-t border-slate-700/60">
+                      <div><strong className="text-slate-400">Cátedra / Área:</strong> {t.specialty}</div>
+                      <div><strong className="text-slate-400">Correo:</strong> {t.email}</div>
+                      <div><strong className="text-slate-400">Teléfono:</strong> {t.phone || 'No registrado'}</div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -762,128 +640,959 @@ export default function AdminPortal() {
           </div>
         )}
 
-        {/* TAB 6: CENSO ESTUDIANTIL */}
-        {activeSubTab === 'students' && (
-          <div className="glass-card p-6 rounded-2xl space-y-6">
-            <div className="flex items-center justify-between">
+        {/* ============================================================== */}
+        {/* PESTAÑA: ASIGNATURAS (Requisito 6: Selector de Docente)        */}
+        {/* ============================================================== */}
+        {activeSubTab === 'subjects' && (
+          <div className="space-y-6 animate-fade-in">
+            <div className="denim-card p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-base font-bold font-heading text-white">Censo Estudiantil Registrado</h2>
-                <p className="text-xs text-slate-400">Alumnos inscritos en la plataforma</p>
+                <h2 className="text-base font-bold font-slab text-white">Plan de Estudios y Asignaturas</h2>
+                <p className="text-xs text-slate-400">
+                  Agregadas una por una a la base de datos con docente titular asignable
+                </p>
               </div>
-            </div>
-
-            {students.length === 0 ? (
-              <div className="p-12 text-center text-xs text-slate-500 italic">
-                No hay estudiantes registrados en la base de datos actualmente.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
-                      <th className="py-2.5 px-3">Estudiante</th>
-                      <th className="py-2.5 px-3">Cédula</th>
-                      <th className="py-2.5 px-3">Año / Grado</th>
-                      <th className="py-2.5 px-3 text-right">Boletín Oficial</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/80">
-                    {students.map((st) => (
-                      <tr key={st.id} className="hover:bg-slate-800/40">
-                        <td className="py-3 px-3 font-bold text-white">{st.name}</td>
-                        <td className="py-3 px-3 font-mono text-slate-400">{st.studentIdNumber || '—'}</td>
-                        <td className="py-3 px-3 text-slate-300">{st.gradeLevel || '4to Año'}</td>
-                        <td className="py-3 px-3 text-right">
-                          <button
-                            onClick={() => setPreviewReportCardStudent(st)}
-                            className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[11px]"
-                          >
-                            Ver / Imprimir Boletín
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* TAB 7: AULAS */}
-        {activeSubTab === 'classrooms' && (
-          <div className="glass-card p-6 rounded-2xl space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-base font-bold font-heading text-white">Sistema de Aulas y Espacios</h2>
-                <p className="text-xs text-slate-400">Espacios físicos de la sede en Barcelona</p>
-              </div>
-
               <button
-                onClick={() => setClassroomModalOpen(true)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition shadow-xs"
+                onClick={() => {
+                  setEditingSubId(null);
+                  setSubjectForm({
+                    name: '',
+                    code: '',
+                    gradeLevel: '1er Año',
+                    teacherName: teachersList[0]?.name || '',
+                    color: '#223C63'
+                  });
+                  setSubjectModalOpen(true);
+                }}
+                className="px-4 py-2.5 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab text-xs rounded-xl shadow-md flex items-center gap-2 cursor-pointer"
               >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Agregar Aula</span>
+                <Plus className="w-4 h-4" />
+                <span>Crear Asignatura</span>
               </button>
             </div>
 
-            {classrooms.length === 0 ? (
-              <div className="p-12 text-center text-xs text-slate-500 italic">
-                No hay aulas registradas en el sistema.
+            {subjects.length === 0 ? (
+              <div className="denim-card p-12 text-center">
+                <BookOpen className="w-10 h-10 text-slate-500 mx-auto mb-3" />
+                <div className="font-bold text-white text-base font-slab">No hay materias creadas</div>
+                <p className="text-xs text-slate-400 max-w-md mx-auto mt-1 mb-4">
+                  El sistema no tiene materias predeterminadas. Agrégalas seleccionando al docente registrado.
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {classrooms.map((c) => (
-                  <div key={c.id} className="p-4 rounded-xl border border-slate-800 bg-slate-900/60 text-xs">
-                    <div className="font-bold text-white text-sm">{c.name}</div>
-                    <div className="text-blue-400 font-mono mt-0.5">{c.code}</div>
-                    <div className="text-slate-400 mt-2">{c.floor} • Capacidad: {c.capacity} alumnos</div>
+                {subjects.map((sub) => (
+                  <div key={sub.id} className="denim-card p-5 space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="denim-patch px-2 py-0.5 text-[10px]">{sub.gradeLevel || '1er Año'}</span>
+                        <h3 className="font-bold text-white text-base font-slab mt-1">{sub.name}</h3>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => {
+                            setEditingSubId(sub.id);
+                            setSubjectForm({
+                              name: sub.name,
+                              code: sub.code || '',
+                              gradeLevel: sub.gradeLevel || '1er Año',
+                              teacherName: sub.teacherName || '',
+                              color: sub.color || '#223C63'
+                            });
+                            setSubjectModalOpen(true);
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-[#DCB35C] rounded-lg transition"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => deleteSubject(sub.id)}
+                          className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg transition"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="text-xs text-slate-300 pt-2 border-t border-slate-700/60 space-y-1">
+                      <div><strong className="text-slate-400">Docente Titular:</strong> {sub.teacherName || 'Sin asignar'}</div>
+                      <div><strong className="text-slate-400">Código de Materia:</strong> {sub.code || 'MAT-CIV'}</div>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* PESTAÑA: HORARIOS Y DÍAS LIBRES (Selectores Requisito 6)       */}
+        {/* ============================================================== */}
+        {activeSubTab === 'schedules' && (
+          <div className="space-y-6 animate-fade-in">
+            <div className="denim-card p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-base font-bold font-slab text-white">Horarios, Recesos y Días Libres</h2>
+                <p className="text-xs text-slate-400">
+                  Programa clases regulares, recesos escolares y declara días no laborables
+                </p>
+              </div>
+              <button
+                onClick={() => setSchedModalOpen(true)}
+                className="px-4 py-2.5 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab text-xs rounded-xl shadow-md flex items-center gap-2 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Agregar Bloque de Horario</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+              {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'].map((day) => {
+                const dayBlocks = schedules.filter((s) => s.day_of_week === day || s.day === day);
+                return (
+                  <div key={day} className="denim-card p-4 space-y-3">
+                    <div className="font-bold font-slab text-sm text-[#f0c36d] border-b border-slate-700/60 pb-1 flex justify-between items-center">
+                      <span>{day}</span>
+                      <span className="text-[10px] text-slate-400">{dayBlocks.length} bloques</span>
+                    </div>
+
+                    {dayBlocks.length === 0 ? (
+                      <div className="text-[11px] text-slate-500 italic py-3 text-center">Sin actividades</div>
+                    ) : (
+                      dayBlocks.map((b) => (
+                        <div
+                          key={b.id}
+                          className={`p-2.5 rounded-xl border text-xs space-y-1 relative group ${
+                            b.entry_type === 'day_off'
+                              ? 'bg-rose-950/40 border-rose-500/40 text-rose-200'
+                              : b.entry_type === 'recess'
+                              ? 'bg-amber-950/40 border-amber-500/40 text-amber-200'
+                              : 'bg-[#101c30] border-slate-700 text-slate-200'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start">
+                            <strong className="text-white font-slab text-xs">{b.subject_name || b.subject || 'Bloque'}</strong>
+                            <button
+                              onClick={() => deleteScheduleBlock(b.id)}
+                              className="text-slate-400 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          <div className="text-[10px] text-slate-400 font-mono">{b.start_time} - {b.end_time || b.time}</div>
+                          {b.classroom_name && <div className="text-[10px] text-[#DCB35C]">Aula: {b.classroom_name}</div>}
+                          {b.teacher_name && <div className="text-[10px] text-slate-400">Docente: {b.teacher_name}</div>}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* PESTAÑA: CERTIFICADOS Y RECONOCIMIENTOS (Requisito 7)          */}
+        {/* ============================================================== */}
+        {activeSubTab === 'certificates' && (
+          <div className="space-y-6 animate-fade-in">
+            <div className="denim-card p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-base font-bold font-slab text-white">Emisión de Certificados Oficiales</h2>
+                <p className="text-xs text-slate-400">
+                  Modelos automáticos: Excelencia Académica, Reconocimiento Deportivo, Aniversario y Valores
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setEditingCertId(null);
+                  if (students[0]) {
+                    handleStudentSelectInCert(students[0].id);
+                  }
+                  setCertModalOpen(true);
+                }}
+                className="px-4 py-2.5 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab text-xs rounded-xl shadow-md flex items-center gap-2 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Emitir Certificado</span>
+              </button>
+            </div>
+
+            {certificates.length === 0 ? (
+              <div className="denim-card p-12 text-center">
+                <Award className="w-10 h-10 text-slate-500 mx-auto mb-3" />
+                <div className="font-bold text-white text-base font-slab">No hay certificados emitidos</div>
+                <p className="text-xs text-slate-400 max-w-md mx-auto mt-1 mb-4">
+                  Selecciona a cualquier alumno matriculado y asígnale un reconocimiento oficial.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {certificates.map((cert) => (
+                  <div key={cert.id} className="denim-card p-5 space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="denim-patch px-2 py-0.5 text-[10px]">{cert.template_type || 'Académico'}</span>
+                        <h3 className="font-bold text-white text-sm font-slab mt-1">{cert.title}</h3>
+                        <div className="text-xs text-[#f0c36d] font-bold mt-0.5">{cert.studentName}</div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setPreviewCert(cert)}
+                          className="p-1.5 text-slate-400 hover:text-white"
+                          title="Imprimir"
+                        >
+                          <Printer className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => deleteCertificate(cert.id)}
+                          className="p-1.5 text-slate-400 hover:text-rose-400"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-slate-300 line-clamp-2">{cert.description}</p>
+                    {cert.scoreNote && (
+                      <div className="text-xs font-mono font-bold text-[#DCB35C]">
+                        Puntaje: {cert.scoreNote} pts
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* PESTAÑA: AJUSTES DE SEGURIDAD DE DIRECCIÓN (Requisito 8)       */}
+        {/* ============================================================== */}
+        {activeSubTab === 'settings' && (
+          <div className="denim-card p-6 sm:p-8 max-w-2xl mx-auto space-y-6 animate-fade-in">
+            <div className="border-b border-slate-700/60 pb-3">
+              <h2 className="text-lg font-bold font-slab text-white flex items-center gap-2">
+                <Key className="w-5 h-5 text-[#DCB35C]" />
+                <span>Credenciales de Dirección General</span>
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">
+                Actualiza el correo y la clave de acceso administrativo. Se guardarán en la base de datos oficial.
+              </p>
+            </div>
+
+            <form onSubmit={handleAdminCredSubmit} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-medium text-slate-300 mb-1">Nombre del Director General</label>
+                <input
+                  type="text"
+                  required
+                  value={adminCredForm.name}
+                  onChange={(e) => setAdminCredForm({ ...adminCredForm, name: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
+                />
+              </div>
+
+              <div>
+                <label className="block font-medium text-slate-300 mb-1">Correo Electrónico Administrativo</label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <input
+                    type="email"
+                    required
+                    value={adminCredForm.email}
+                    onChange={(e) => setAdminCredForm({ ...adminCredForm, email: e.target.value })}
+                    className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-medium text-slate-300 mb-1">Nueva Contraseña de Administrador</label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <input
+                    type="password"
+                    required
+                    value={adminCredForm.password}
+                    onChange={(e) => setAdminCredForm({ ...adminCredForm, password: e.target.value })}
+                    placeholder="••••••••"
+                    className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-medium text-slate-300 mb-1">Teléfono Institucional</label>
+                <input
+                  type="tel"
+                  value={adminCredForm.phone}
+                  onChange={(e) => setAdminCredForm({ ...adminCredForm, phone: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab rounded-xl shadow-lg cursor-pointer flex items-center gap-2"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Guardar Credenciales en Base de Datos</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* PESTAÑA: PAGOS & SOLVENCIAS                                   */}
+        {/* ============================================================== */}
+        {activeSubTab === 'payments' && (
+          <div className="denim-card p-6 space-y-4 animate-fade-in">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-base font-bold font-slab text-white">Conciliación de Pagos y Comprobantes</h2>
+                <p className="text-xs text-slate-400">Comprobantes subidos directamente por los representantes legales</p>
+              </div>
+            </div>
+
+            {payments.length === 0 ? (
+              <div className="p-12 text-center rounded-2xl bg-[#101c30] border-stitch-subtle">
+                <CreditCard className="w-10 h-10 text-slate-500 mx-auto mb-2" />
+                <div className="font-bold text-white font-slab">No hay pagos pendientes de revisión</div>
+                <p className="text-xs text-slate-400 mt-1">Los pagos reportados por representantes aparecerán aquí.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {payments.map((p) => (
+                  <div key={p.id} className="p-4 rounded-xl bg-[#101c30] border border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs">
+                    <div>
+                      <div className="font-bold text-white font-slab text-sm">{p.studentName || p.student_name}</div>
+                      <div className="text-slate-400">Representante: {p.representativeName || p.representative_name}</div>
+                      <div className="text-slate-400 font-mono">Ref: {p.referenceNumber || p.reference_number} • Monto: ${p.amount}</div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2.5 py-1 rounded-lg font-bold text-[10px] ${p.status === 'approved' ? 'bg-emerald-950 text-emerald-300' : 'bg-amber-950 text-amber-300'}`}>
+                        {p.status === 'approved' ? 'Aprobado' : 'Pendiente'}
+                      </span>
+                      {p.status !== 'approved' && (
+                        <button
+                          onClick={() => updatePaymentStatus(p.id, 'approved')}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg cursor-pointer"
+                        >
+                          Aprobar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* PESTAÑA: AULAS Y ESPACIOS                                     */}
+        {/* ============================================================== */}
+        {activeSubTab === 'classrooms' && (
+          <div className="space-y-6 animate-fade-in">
+            <div className="denim-card p-6 flex justify-between items-center">
+              <div>
+                <h2 className="text-base font-bold font-slab text-white">Espacios y Aulas</h2>
+                <p className="text-xs text-slate-400">Aulas disponibles para asignar a secciones y horarios</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {classrooms.map((c) => (
+                <div key={c.id} className="denim-card p-4 space-y-2">
+                  <div className="font-bold text-white font-slab text-sm">{c.name}</div>
+                  <div className="text-xs text-slate-400">Edificio: {c.building}</div>
+                  <div className="text-xs text-[#DCB35C]">Capacidad: {c.capacity} pupitres</div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
 
-      {/* Subject Modal */}
-      {subjectModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-          <div className="glass-surface border border-slate-700 rounded-2xl w-full max-w-md p-6">
-            <h3 className="text-base font-bold font-heading text-white mb-4">
-              {editingSubId ? 'Editar Asignatura' : 'Agregar Asignatura a la Base de Datos'}
-            </h3>
-            <form onSubmit={handleSaveSubject} className="space-y-3.5 text-xs">
+      {/* ============================================================== */}
+      {/* MODAL 1: MATRICULAR ESTUDIANTE (Requisito 5)                   */}
+      {/* ============================================================== */}
+      {enrollModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in overflow-y-auto">
+          <div className="bg-[#152338] border border-stitch rounded-2xl w-full max-w-lg p-6 text-white my-6">
+            <div className="flex justify-between items-center mb-4">
               <div>
-                <label className="block text-slate-400 mb-1">Nombre de la Materia</label>
+                <h3 className="text-lg font-bold font-slab text-white flex items-center gap-2">
+                  <UserPlus className="w-5 h-5 text-[#DCB35C]" />
+                  <span>Matriculación Oficial de Estudiante</span>
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Año Escolar {activeYear} • Genera las credenciales institucionales
+                </p>
+              </div>
+              <button onClick={() => setEnrollModalOpen(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEnrollSubmit} className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 mb-1 font-medium">Nombres</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ej. José Daniel"
+                    value={enrollForm.firstName}
+                    onChange={(e) => setEnrollForm({ ...enrollForm, firstName: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-300 mb-1 font-medium">Apellidos</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ej. Marcano Silva"
+                    value={enrollForm.lastName}
+                    onChange={(e) => setEnrollForm({ ...enrollForm, lastName: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 mb-1 font-medium">Cédula de Identidad</label>
                 <input
                   type="text"
                   required
-                  placeholder="Ej. Matemáticas"
-                  value={subjectForm.name}
-                  onChange={(e) => setSubjectForm({ ...subjectForm, name: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                  placeholder="Ej. V-31.542.890"
+                  value={enrollForm.cedula}
+                  onChange={(e) => setEnrollForm({ ...enrollForm, cedula: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden font-mono"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-400 mb-1">Código</label>
+                  <label className="block text-slate-300 mb-1 font-medium">Año a Cursar</label>
+                  <select
+                    value={enrollForm.gradeYear}
+                    onChange={(e) => setEnrollForm({ ...enrollForm, gradeYear: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
+                  >
+                    <option value="1er Año">1er Año de Bachillerato</option>
+                    <option value="2do Año">2do Año de Bachillerato</option>
+                    <option value="3er Año">3er Año de Bachillerato</option>
+                    <option value="4to Año">4to Año de Bachillerato</option>
+                    <option value="5to Año">5to Año de Bachillerato</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-300 mb-1 font-medium">Sección Oficial</label>
+                  <select
+                    value={enrollForm.sectionLetter}
+                    onChange={(e) => setEnrollForm({ ...enrollForm, sectionLetter: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
+                  >
+                    <option value="Sección A">Sección A</option>
+                    <option value="Sección B">Sección B</option>
+                    <option value="Sección C">Sección C</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 mb-1 font-medium">Correo Electrónico (Usuario)</label>
                   <input
-                    type="text"
-                    placeholder="MAT-401"
-                    value={subjectForm.code}
-                    onChange={(e) => setSubjectForm({ ...subjectForm, code: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                    type="email"
+                    required
+                    placeholder="alumno@integralvenezuela.edu.ve"
+                    value={enrollForm.email}
+                    onChange={(e) => setEnrollForm({ ...enrollForm, email: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-400 mb-1">Año / Nivel</label>
+                  <label className="block text-slate-300 mb-1 font-medium">Contraseña Asignada</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="clave123"
+                    value={enrollForm.password}
+                    onChange={(e) => setEnrollForm({ ...enrollForm, password: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 mb-1 font-medium">Nombre del Representante</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. María Silva"
+                    value={enrollForm.representativeName}
+                    onChange={(e) => setEnrollForm({ ...enrollForm, representativeName: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-300 mb-1 font-medium">Teléfono de Contacto</label>
+                  <input
+                    type="tel"
+                    placeholder="+58 414 1234567"
+                    value={enrollForm.phone}
+                    onChange={(e) => setEnrollForm({ ...enrollForm, phone: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-700/60">
+                <button
+                  type="button"
+                  onClick={() => setEnrollModalOpen(false)}
+                  className="px-4 py-2 text-slate-400 hover:text-white cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab rounded-xl shadow-md cursor-pointer"
+                >
+                  Matricular y Guardar Credenciales
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL 2: FICHA DE CREDENCIALES DEL ALUMNO (Requisito 5)         */}
+      {/* ============================================================== */}
+      {selectedAccessStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+          <div className="bg-[#152338] border border-stitch rounded-2xl w-full max-w-md p-6 text-white space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-700/60 pb-3">
+              <div>
+                <h3 className="text-base font-bold font-slab text-[#f0c36d]">Ficha de Acceso para el Representante</h3>
+                <p className="text-xs text-slate-400">Entrega estas credenciales al representante del alumno</p>
+              </div>
+              <button onClick={() => setSelectedAccessStudent(null)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 rounded-xl bg-[#101c30] border border-slate-700 space-y-2.5 text-xs font-mono">
+              <div>
+                <span className="text-slate-400 block text-[10px] uppercase">Estudiante:</span>
+                <strong className="text-white text-sm font-slab">{selectedAccessStudent.name}</strong>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] uppercase">Cédula:</span>
+                <strong className="text-[#f0c36d]">{selectedAccessStudent.cedula}</strong>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] uppercase">Año y Sección:</span>
+                <strong className="text-white">{selectedAccessStudent.grade_year || selectedAccessStudent.gradeLevel} - {selectedAccessStudent.section}</strong>
+              </div>
+              <div className="pt-2 border-t border-slate-800">
+                <span className="text-slate-400 block text-[10px] uppercase">Usuario / Correo:</span>
+                <strong className="text-white select-all">{selectedAccessStudent.email}</strong>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] uppercase">Contraseña Inicial:</span>
+                <strong className="text-white select-all text-sm text-[#f0c36d]">{selectedAccessStudent.password}</strong>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(`Credenciales de Acceso - U.E. Colegio Integral Venezuela\nEstudiante: ${selectedAccessStudent.name}\nCédula: ${selectedAccessStudent.cedula}\nAño: ${selectedAccessStudent.grade_year} ${selectedAccessStudent.section}\nCorreo: ${selectedAccessStudent.email}\nContraseña: ${selectedAccessStudent.password}`);
+                  notify('Ficha de credenciales copiada al portapapeles');
+                }}
+                className="px-4 py-2 bg-[#223C63] hover:bg-[#1A2B45] text-white border border-[#DCB35C]/40 rounded-xl text-xs font-bold font-slab flex items-center gap-2 cursor-pointer"
+              >
+                <Copy className="w-4 h-4 text-[#DCB35C]" />
+                <span>Copiar Ficha</span>
+              </button>
+              <button
+                onClick={() => setSelectedAccessStudent(null)}
+                className="px-4 py-2 bg-[#DCB35C] text-[#1A2B45] font-bold font-slab rounded-xl text-xs cursor-pointer"
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL 3: SUBIR DE AÑO ESCOLAR (Requisito 9)                    */}
+      {/* ============================================================== */}
+      {promoteConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+          <div className="bg-[#152338] border-2 border-[#DCB35C] rounded-2xl w-full max-w-md p-6 text-white space-y-4">
+            <div className="flex items-center gap-3 text-amber-400">
+              <ArrowUpRight className="w-7 h-7 text-[#f0c36d]" />
+              <div>
+                <h3 className="text-base font-bold font-slab text-white">Promover al Siguiente Año Escolar</h3>
+                <p className="text-xs text-slate-400">Prosecución de Estudios Institucional</p>
+              </div>
+            </div>
+
+            <div className="text-xs text-slate-300 space-y-2 p-3.5 bg-[#101c30] rounded-xl border border-slate-700">
+              <p>Esta acción ejecutará automáticamente:</p>
+              <ul className="list-disc list-inside space-y-1 text-slate-300">
+                <li>1er Año pasará a 2do Año</li>
+                <li>2do Año pasará a 3er Año</li>
+                <li>3er Año pasará a 4to Año</li>
+                <li>4to Año pasará a 5to Año</li>
+                <li>5to Año pasará a estado <strong>Egresado (Bachiller)</strong></li>
+                <li>El Año Escolar activo cambiará en toda la página de <strong>{activeYear}</strong> al siguiente período.</li>
+              </ul>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => setPromoteConfirmOpen(false)}
+                className="px-4 py-2 text-slate-400 hover:text-white cursor-pointer text-xs"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  promoteSchoolYear();
+                  setPromoteConfirmOpen(false);
+                }}
+                className="px-5 py-2.5 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab text-xs rounded-xl shadow-lg cursor-pointer"
+              >
+                Confirmar y Promover Alumnos
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL 4: VACIAR BASE DE DATOS (Requisito 9)                    */}
+      {/* ============================================================== */}
+      {wipeConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+          <div className="bg-[#152338] border-2 border-rose-500 rounded-2xl w-full max-w-md p-6 text-white space-y-4">
+            <div className="flex items-center gap-3 text-rose-400">
+              <AlertTriangle className="w-8 h-8 text-rose-400" />
+              <div>
+                <h3 className="text-base font-bold font-slab text-white">¿Vaciar Nómina de Estudiantes?</h3>
+                <p className="text-xs text-rose-300">Advertencia de seguridad del sistema</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed p-3.5 bg-rose-950/40 rounded-xl border border-rose-500/30">
+              Esta acción eliminará todos los estudiantes matriculados, notas registradas, asistencias y pagos pendientes para dejar la base de datos limpia. Las secciones y las asignaturas se mantendrán intactas.
+            </p>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => setWipeConfirmOpen(false)}
+                className="px-4 py-2 text-slate-400 hover:text-white cursor-pointer text-xs"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  emptyStudentsDatabase();
+                  setWipeConfirmOpen(false);
+                }}
+                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold font-slab text-xs rounded-xl shadow-lg cursor-pointer"
+              >
+                Sí, Vaciar Base de Datos
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL 5: AGREGAR SECCIÓN (Requisito 4)                         */}
+      {/* ============================================================== */}
+      {sectionModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+          <div className="bg-[#152338] border border-stitch rounded-2xl w-full max-w-md p-6 text-white space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-700/60 pb-3">
+              <h3 className="text-base font-bold font-slab text-white">Agregar Sección Escolar</h3>
+              <button onClick={() => setSectionModalOpen(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSectionSubmit} className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 mb-1 font-medium">Año de Bachillerato</label>
+                  <select
+                    value={sectionForm.year}
+                    onChange={(e) => setSectionForm({ ...sectionForm, year: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
+                  >
+                    <option value="1er Año">1er Año</option>
+                    <option value="2do Año">2do Año</option>
+                    <option value="3er Año">3er Año</option>
+                    <option value="4to Año">4to Año</option>
+                    <option value="5to Año">5to Año</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 mb-1 font-medium">Sección (Solo hasta la C)</label>
+                  <select
+                    value={sectionForm.section}
+                    onChange={(e) => setSectionForm({ ...sectionForm, section: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
+                  >
+                    <option value="A">Sección A</option>
+                    <option value="B">Sección B</option>
+                    <option value="C">Sección C</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Selector de Aula */}
+              <div>
+                <label className="block text-slate-300 mb-1 font-medium">Aula Asignada (Selector)</label>
+                <select
+                  value={sectionForm.classroom}
+                  onChange={(e) => setSectionForm({ ...sectionForm, classroom: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
+                >
+                  {classrooms.map((c) => (
+                    <option key={c.id} value={c.name}>{c.name} ({c.building})</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Selector de Profesor Guía */}
+              <div>
+                <label className="block text-slate-300 mb-1 font-medium">Profesor Guía (Selector de Docentes)</label>
+                <select
+                  value={sectionForm.guideTeacher}
+                  onChange={(e) => setSectionForm({ ...sectionForm, guideTeacher: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
+                >
+                  <option value="Por asignar">Por asignar</option>
+                  {teachersList.map((t) => (
+                    <option key={t.id} value={t.name}>{t.name} ({t.specialty})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 mb-1 font-medium">Capacidad Máxima de Pupitres</label>
+                <input
+                  type="number"
+                  min="15"
+                  max="45"
+                  value={sectionForm.capacity}
+                  onChange={(e) => setSectionForm({ ...sectionForm, capacity: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-700/60">
+                <button
+                  type="button"
+                  onClick={() => setSectionModalOpen(false)}
+                  className="px-4 py-2 text-slate-400 hover:text-white"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab rounded-xl shadow-md"
+                >
+                  Guardar Sección
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL 6: AGREGAR / EDITAR DOCENTE (Requisito 6)                */}
+      {/* ============================================================== */}
+      {teacherModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+          <div className="bg-[#152338] border border-stitch rounded-2xl w-full max-w-md p-6 text-white space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-700/60 pb-3">
+              <h3 className="text-base font-bold font-slab text-white">
+                {editingTeacherId ? 'Editar Datos del Docente' : 'Registrar Nuevo Docente'}
+              </h3>
+              <button onClick={() => setTeacherModalOpen(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleTeacherSubmit} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block text-slate-300 mb-1 font-medium">Nombre Completo del Profesor</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. Prof. Carlos Mendoza"
+                  value={teacherForm.name}
+                  onChange={(e) => setTeacherForm({ ...teacherForm, name: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 mb-1 font-medium">Cédula de Identidad</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="V-14.892.341"
+                    value={teacherForm.cedula}
+                    onChange={(e) => setTeacherForm({ ...teacherForm, cedula: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-300 mb-1 font-medium">Área / Especialidad</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Matemáticas, Física..."
+                    value={teacherForm.specialty}
+                    onChange={(e) => setTeacherForm({ ...teacherForm, specialty: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 mb-1 font-medium">Correo Electrónico</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="docente@integralvenezuela.edu.ve"
+                    value={teacherForm.email}
+                    onChange={(e) => setTeacherForm({ ...teacherForm, email: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-300 mb-1 font-medium">Contraseña Asignada</label>
+                  <input
+                    type="text"
+                    required
+                    value={teacherForm.password}
+                    onChange={(e) => setTeacherForm({ ...teacherForm, password: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 mb-1 font-medium">Teléfono de Contacto</label>
+                <input
+                  type="tel"
+                  placeholder="+58 414 1234567"
+                  value={teacherForm.phone}
+                  onChange={(e) => setTeacherForm({ ...teacherForm, phone: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-700/60">
+                <button
+                  type="button"
+                  onClick={() => setTeacherModalOpen(false)}
+                  className="px-4 py-2 text-slate-400 hover:text-white"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab rounded-xl shadow-md"
+                >
+                  {editingTeacherId ? 'Actualizar Docente' : 'Guardar Docente'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL 7: AGREGAR / EDITAR MATERIA (Selector de Docente)        */}
+      {/* ============================================================== */}
+      {subjectModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+          <div className="bg-[#152338] border border-stitch rounded-2xl w-full max-w-md p-6 text-white space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-700/60 pb-3">
+              <h3 className="text-base font-bold font-slab text-white">
+                {editingSubId ? 'Editar Asignatura' : 'Crear Asignatura en Base de Datos'}
+              </h3>
+              <button onClick={() => setSubjectModalOpen(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (editingSubId) {
+                  updateSubject(editingSubId, subjectForm);
+                } else {
+                  addSubject(subjectForm);
+                }
+                setSubjectModalOpen(false);
+              }}
+              className="space-y-3.5 text-xs"
+            >
+              <div>
+                <label className="block text-slate-300 mb-1 font-medium">Nombre de la Asignatura</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. Matemática, Física, Química, Biología..."
+                  value={subjectForm.name}
+                  onChange={(e) => setSubjectForm({ ...subjectForm, name: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 mb-1 font-medium">Código</label>
+                  <input
+                    type="text"
+                    placeholder="MAT-01"
+                    value={subjectForm.code}
+                    onChange={(e) => setSubjectForm({ ...subjectForm, code: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-300 mb-1 font-medium">Año del Plan</label>
                   <select
                     value={subjectForm.gradeLevel}
                     onChange={(e) => setSubjectForm({ ...subjectForm, gradeLevel: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
                   >
                     <option value="1er Año">1er Año</option>
                     <option value="2do Año">2do Año</option>
@@ -894,28 +1603,32 @@ export default function AdminPortal() {
                 </div>
               </div>
 
+              {/* Selector de Docente Titular (Requisito 6) */}
               <div>
-                <label className="block text-slate-400 mb-1">Profesor Asignado</label>
-                <input
-                  type="text"
-                  placeholder="Ej. Prof. Carlos Ramírez"
+                <label className="block text-slate-300 mb-1 font-medium">Docente Titular (Selector)</label>
+                <select
                   value={subjectForm.teacherName}
                   onChange={(e) => setSubjectForm({ ...subjectForm, teacherName: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
-                />
+                  className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
+                >
+                  <option value="">Selecciona un docente registrado...</option>
+                  {teachersList.map((t) => (
+                    <option key={t.id} value={t.name}>{t.name} ({t.specialty})</option>
+                  ))}
+                </select>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-700/60">
                 <button
                   type="button"
                   onClick={() => setSubjectModalOpen(false)}
-                  className="px-3 py-1.5 text-slate-400 hover:text-white"
+                  className="px-4 py-2 text-slate-400 hover:text-white"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg"
+                  className="px-5 py-2.5 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab rounded-xl shadow-md"
                 >
                   Guardar Asignatura
                 </button>
@@ -925,53 +1638,68 @@ export default function AdminPortal() {
         </div>
       )}
 
-      {/* Schedule Modal (Classes, Recess, Day Off) */}
+      {/* ============================================================== */}
+      {/* MODAL 8: HORARIO CON SELECTORES (Requisito 6)                  */}
+      {/* ============================================================== */}
       {schedModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-          <div className="glass-surface border border-slate-700 rounded-2xl w-full max-w-md p-6">
-            <h3 className="text-base font-bold font-heading text-white mb-3">
-              Añadir Entrada al Horario
-            </h3>
-
-            {/* Selector de Tipo */}
-            <div className="grid grid-cols-3 gap-1.5 p-1 rounded-lg bg-slate-900 border border-slate-800 text-xs mb-4">
-              <button
-                type="button"
-                onClick={() => setSchedType('regular')}
-                className={`py-1.5 rounded-md font-medium transition ${
-                  schedType === 'regular' ? 'bg-blue-600 text-white' : 'text-slate-400'
-                }`}
-              >
-                Clase Regular
-              </button>
-              <button
-                type="button"
-                onClick={() => setSchedType('recess')}
-                className={`py-1.5 rounded-md font-medium transition ${
-                  schedType === 'recess' ? 'bg-amber-600 text-white' : 'text-slate-400'
-                }`}
-              >
-                Receso
-              </button>
-              <button
-                type="button"
-                onClick={() => setSchedType('day_off')}
-                className={`py-1.5 rounded-md font-medium transition ${
-                  schedType === 'day_off' ? 'bg-blue-700 text-white' : 'text-slate-400'
-                }`}
-              >
-                Día Libre
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+          <div className="bg-[#152338] border border-stitch rounded-2xl w-full max-w-md p-6 text-white space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-700/60 pb-3">
+              <h3 className="text-base font-bold font-slab text-white">Programar Bloque de Horario</h3>
+              <button onClick={() => setSchedModalOpen(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveSchedule} className="space-y-3.5 text-xs">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                addScheduleBlock({
+                  ...schedForm,
+                  entry_type: schedType
+                });
+                setSchedModalOpen(false);
+              }}
+              className="space-y-3.5 text-xs"
+            >
+              {/* Type selector: Regular, Recess, Day Off */}
+              <div className="flex rounded-xl bg-[#101c30] p-1 border border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setSchedType('regular')}
+                  className={`flex-1 py-1.5 rounded-lg font-bold font-slab transition ${
+                    schedType === 'regular' ? 'bg-[#223C63] text-white' : 'text-slate-400'
+                  }`}
+                >
+                  Clase Regular
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSchedType('recess')}
+                  className={`flex-1 py-1.5 rounded-lg font-bold font-slab transition ${
+                    schedType === 'recess' ? 'bg-amber-900/60 text-amber-200' : 'text-slate-400'
+                  }`}
+                >
+                  Receso Escolar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSchedType('day_off')}
+                  className={`flex-1 py-1.5 rounded-lg font-bold font-slab transition ${
+                    schedType === 'day_off' ? 'bg-rose-900/60 text-rose-200' : 'text-slate-400'
+                  }`}
+                >
+                  Día Libre
+                </button>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-400 mb-1">Día</label>
+                  <label className="block text-slate-300 mb-1 font-medium">Día de la Semana</label>
                   <select
                     value={schedForm.day}
                     onChange={(e) => setSchedForm({ ...schedForm, day: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
                   >
                     <option value="Lunes">Lunes</option>
                     <option value="Martes">Martes</option>
@@ -981,80 +1709,103 @@ export default function AdminPortal() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-slate-400 mb-1">Horario</label>
+                  <label className="block text-slate-300 mb-1 font-medium">Horario</label>
                   <input
                     type="text"
                     required
                     placeholder="07:00 - 08:30 AM"
                     value={schedForm.time}
                     onChange={(e) => setSchedForm({ ...schedForm, time: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
                   />
                 </div>
               </div>
 
               {schedType === 'regular' && (
                 <>
+                  {/* Selector de Materia */}
                   <div>
-                    <label className="block text-slate-400 mb-1">Materia</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Ej. Física"
+                    <label className="block text-slate-300 mb-1 font-medium">Asignatura (Selector)</label>
+                    <select
                       value={schedForm.subject}
                       onChange={(e) => setSchedForm({ ...schedForm, subject: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
-                    />
+                      className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
+                    >
+                      {subjects.map((s) => (
+                        <option key={s.id} value={s.name}>{s.name} ({s.gradeLevel})</option>
+                      ))}
+                    </select>
                   </div>
+
+                  {/* Selector de Profesor */}
                   <div>
-                    <label className="block text-slate-400 mb-1">Aula Asignada</label>
-                    <input
-                      type="text"
-                      placeholder="Aula 1 - Simón Bolívar (A-101)"
-                      value={schedForm.classroom}
-                      onChange={(e) => setSchedForm({ ...schedForm, classroom: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-400 mb-1">Profesor Asignado</label>
-                    <input
-                      type="text"
-                      placeholder="Prof. Carlos Ramírez"
+                    <label className="block text-slate-300 mb-1 font-medium">Docente (Selector)</label>
+                    <select
                       value={schedForm.teacher}
                       onChange={(e) => setSchedForm({ ...schedForm, teacher: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
-                    />
+                      className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
+                    >
+                      {teachersList.map((t) => (
+                        <option key={t.id} value={t.name}>{t.name} ({t.specialty})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Selector de Aula */}
+                  <div>
+                    <label className="block text-slate-300 mb-1 font-medium">Aula (Selector)</label>
+                    <select
+                      value={schedForm.classroom}
+                      onChange={(e) => setSchedForm({ ...schedForm, classroom: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
+                    >
+                      {classrooms.map((c) => (
+                        <option key={c.id} value={c.name}>{c.name} ({c.building})</option>
+                      ))}
+                    </select>
                   </div>
                 </>
               )}
 
-              {schedType === 'day_off' && (
+              {schedType === 'recess' && (
                 <div>
-                  <label className="block text-slate-400 mb-1">Motivo del Día Libre</label>
+                  <label className="block text-slate-300 mb-1 font-medium">Descripción del Receso</label>
                   <input
                     type="text"
-                    placeholder="Ej. Feriado Regional o Consejo Pedagógico"
+                    placeholder="Pausa pedagógica / Desayuno recreativo"
                     value={schedForm.notes}
-                    onChange={(e) => setSchedForm({ ...schedForm, notes: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                    onChange={(e) => setSchedForm({ ...schedForm, notes: e.target.value, subject: 'Receso Escolar' })}
+                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
                   />
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-2 pt-2">
+              {schedType === 'day_off' && (
+                <div>
+                  <label className="block text-slate-300 mb-1 font-medium">Motivo del Día Libre</label>
+                  <input
+                    type="text"
+                    placeholder="Feriado nacional / Efeméride / Consejo docente"
+                    value={schedForm.notes}
+                    onChange={(e) => setSchedForm({ ...schedForm, notes: e.target.value, subject: 'Día Libre (No Laborable)' })}
+                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
+                  />
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-700/60">
                 <button
                   type="button"
                   onClick={() => setSchedModalOpen(false)}
-                  className="px-3 py-1.5 text-slate-400 hover:text-white"
+                  className="px-4 py-2 text-slate-400 hover:text-white"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg"
+                  className="px-5 py-2.5 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab rounded-xl shadow-md"
                 >
-                  Guardar en Horario
+                  Guardar Horario
                 </button>
               </div>
             </form>
@@ -1062,147 +1813,111 @@ export default function AdminPortal() {
         </div>
       )}
 
-      {/* Certificate Creation & Editing Modal (Templates & Note vs Recognition) */}
+      {/* ============================================================== */}
+      {/* MODAL 9: EMITIR CERTIFICADO (Selector de Alumno Requisito 6/7) */}
+      {/* ============================================================== */}
       {certModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in overflow-y-auto">
-          <div className="glass-surface border border-slate-700 rounded-2xl w-full max-w-lg p-6 my-6">
-            <h3 className="text-base font-bold font-heading text-white mb-4">
-              {editingCertId ? 'Editar Certificado Oficial' : 'Emitir Certificado Automático'}
-            </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+          <div className="bg-[#152338] border border-stitch rounded-2xl w-full max-w-lg p-6 text-white space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-700/60 pb-3">
+              <h3 className="text-base font-bold font-slab text-white">Emitir Certificado Institucional</h3>
+              <button onClick={() => setCertModalOpen(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-            <form onSubmit={handleSaveCert} className="space-y-3.5 text-xs">
+            <form onSubmit={handleCertSubmit} className="space-y-3.5 text-xs">
+              {/* Selector de Alumno (Requisito 6) */}
               <div>
-                <label className="block text-slate-400 mb-1">Nombre del Estudiante</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ej. Valeria Sofía Morales"
-                  value={certForm.studentName}
-                  onChange={(e) => setCertForm({ ...certForm, studentName: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
-                />
+                <label className="block text-slate-300 mb-1 font-medium">Seleccionar Alumno (Selector de Nómina)</label>
+                <select
+                  value={certForm.studentId}
+                  onChange={(e) => handleStudentSelectInCert(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
+                >
+                  {students.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} — C.I: {s.cedula || 'Sin cédula'} ({s.grade_year || s.gradeLevel})
+                    </option>
+                  ))}
+                </select>
               </div>
 
+              {/* Plantilla */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-400 mb-1">Cédula de Identidad</label>
-                  <input
-                    type="text"
-                    placeholder="V-31.452.981"
-                    value={certForm.studentIdNumber}
-                    onChange={(e) => setCertForm({ ...certForm, studentIdNumber: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-400 mb-1">Año / Grado</label>
-                  <input
-                    type="text"
-                    placeholder="4to Año de Bachillerato"
-                    value={certForm.gradeLevel}
-                    onChange={(e) => setCertForm({ ...certForm, gradeLevel: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
-                  />
-                </div>
-              </div>
-
-              {/* Template / Model selector */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-400 mb-1">Modelo de Certificado</label>
+                  <label className="block text-slate-300 mb-1 font-medium">Modelo de Certificado</label>
                   <select
                     value={certForm.template_type}
                     onChange={(e) => {
                       const t = e.target.value;
                       let tit = 'Certificado de Excelencia Académica';
-                      let desc = 'En reconocimiento por su destacado rendimiento académico.';
-                      if (t === 'sports') {
-                        tit = 'Reconocimiento al Mérito Deportivo';
-                        desc = 'Por su destacada participación en torneos y disciplina atlética.';
-                      } else if (t === 'anniversary') {
-                        tit = 'Mención de Aniversario: 35 Años Enseñando a Vivir';
-                        desc = 'Por su compromiso y participación en las jornadas conmemorativas del colegio.';
-                      } else if (t === 'values') {
-                        tit = 'Mención al Civismo, Convivencia y Valores';
-                        desc = 'Por su conducta ejemplar, respeto a los símbolos patrios y solidaridad.';
-                      }
-                      setCertForm({
-                        ...certForm,
-                        template_type: t,
-                        title: tit,
-                        description: desc
-                      });
+                      if (t === 'sports') tit = 'Reconocimiento Deportivo';
+                      if (t === 'anniversary') tit = 'Participación Conmemorativa 35 Años';
+                      if (t === 'values') tit = 'Mérito en Valores y Ciudadanía';
+                      setCertForm({ ...certForm, template_type: t, title: tit });
                     }}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
                   >
                     <option value="academic">Excelencia Académica</option>
-                    <option value="sports">Eventos Deportivos</option>
+                    <option value="sports">Reconocimiento Deportivo</option>
                     <option value="anniversary">Aniversario Institucional</option>
                     <option value="values">Valores y Convivencia</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-slate-400 mb-1">Tipo de Certificado</label>
+                  <label className="block text-slate-300 mb-1 font-medium">Tipo de Reconocimiento</label>
                   <select
                     value={certForm.category}
                     onChange={(e) => setCertForm({ ...certForm, category: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
                   >
-                    <option value="recognition">Reconocimiento (Honor)</option>
+                    <option value="recognition">Tipo Reconocimiento (Mérito)</option>
                     <option value="grade">Tipo Nota (Con Promedio)</option>
                   </select>
                 </div>
               </div>
 
+              {/* Calificación centrada debajo del nombre (Requisito 7) */}
               {certForm.category === 'grade' && (
                 <div>
-                  <label className="block text-slate-400 mb-1">Calificación / Promedio a Destacar</label>
+                  <label className="block text-slate-300 mb-1 font-medium">Puntos Obtenidos (Aparecerá Centrado Debajo del Nombre)</label>
                   <input
                     type="text"
-                    placeholder="Ej. 19.8 / 20 pts"
+                    required
+                    placeholder="Ej. 19.50"
                     value={certForm.scoreNote}
                     onChange={(e) => setCertForm({ ...certForm, scoreNote: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white font-bold"
+                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] font-mono text-sm"
                   />
                 </div>
               )}
 
               <div>
-                <label className="block text-slate-400 mb-1">Título del Diploma</label>
-                <input
-                  type="text"
-                  required
-                  value={certForm.title}
-                  onChange={(e) => setCertForm({ ...certForm, title: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-400 mb-1">Texto Conmemorativo</label>
+                <label className="block text-slate-300 mb-1 font-medium">Texto del Reconocimiento</label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   required
                   value={certForm.description}
                   onChange={(e) => setCertForm({ ...certForm, description: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                  className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
                 ></textarea>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-700/60">
                 <button
                   type="button"
                   onClick={() => setCertModalOpen(false)}
-                  className="px-3 py-1.5 text-slate-400 hover:text-white"
+                  className="px-4 py-2 text-slate-400 hover:text-white"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg"
+                  className="px-5 py-2.5 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab rounded-xl shadow-md"
                 >
-                  {editingCertId ? 'Actualizar Certificado' : 'Emitir Certificado'}
+                  Emitir y Generar Certificado
                 </button>
               </div>
             </form>
@@ -1210,145 +1925,15 @@ export default function AdminPortal() {
         </div>
       )}
 
-      {/* Teacher Modal */}
-      {teacherModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-          <div className="glass-surface border border-slate-700 rounded-2xl w-full max-w-md p-6">
-            <h3 className="text-base font-bold font-heading text-white mb-4">Agregar Profesor</h3>
-            <form onSubmit={handleSaveTeacher} className="space-y-3.5 text-xs">
-              <div>
-                <label className="block text-slate-400 mb-1">Nombre Completo</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Prof. Carlos Ramírez"
-                  value={teacherForm.name}
-                  onChange={(e) => setTeacherForm({ ...teacherForm, name: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-400 mb-1">Correo Electrónico</label>
-                <input
-                  type="email"
-                  required
-                  placeholder="profesor@integralvenezuela.edu.ve"
-                  value={teacherForm.email}
-                  onChange={(e) => setTeacherForm({ ...teacherForm, email: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-400 mb-1">Teléfono</label>
-                  <input
-                    type="text"
-                    placeholder="+58 412 1234567"
-                    value={teacherForm.phone}
-                    onChange={(e) => setTeacherForm({ ...teacherForm, phone: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-400 mb-1">Departamento</label>
-                  <input
-                    type="text"
-                    placeholder="Ciencias Exactas"
-                    value={teacherForm.department}
-                    onChange={(e) => setTeacherForm({ ...teacherForm, department: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setTeacherModalOpen(false)}
-                  className="px-3 py-1.5 text-slate-400 hover:text-white"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg"
-                >
-                  Guardar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {/* Preview Certificate Modal */}
+      {previewCert && (
+        <CertificateModal
+          certificate={previewCert}
+          onClose={() => setPreviewCert(null)}
+        />
       )}
 
-      {/* Classroom Modal */}
-      {classroomModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-          <div className="glass-surface border border-slate-700 rounded-2xl w-full max-w-md p-6">
-            <h3 className="text-base font-bold font-heading text-white mb-4">Agregar Aula</h3>
-            <form onSubmit={handleSaveClassroom} className="space-y-3.5 text-xs">
-              <div>
-                <label className="block text-slate-400 mb-1">Nombre del Aula</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Aula 1 - Simón Bolívar"
-                  value={classroomForm.name}
-                  onChange={(e) => setClassroomForm({ ...classroomForm, name: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-400 mb-1">Código</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="A-101"
-                    value={classroomForm.code}
-                    onChange={(e) => setClassroomForm({ ...classroomForm, code: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-400 mb-1">Capacidad</label>
-                  <input
-                    type="number"
-                    required
-                    value={classroomForm.capacity}
-                    onChange={(e) => setClassroomForm({ ...classroomForm, capacity: Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setClassroomModalOpen(false)}
-                  className="px-3 py-1.5 text-slate-400 hover:text-white"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg"
-                >
-                  Guardar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Official Certificate Preview Modal */}
-      <CertificateModal certificate={previewCert} onClose={() => setPreviewCert(null)} />
-
-      {/* Official Report Card Preview Modal */}
+      {/* Preview Report Card Modal */}
       {previewReportCardStudent && (
         <ReportCardModal
           student={previewReportCardStudent}

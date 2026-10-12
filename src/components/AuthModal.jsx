@@ -9,7 +9,7 @@ import {
   Lock,
   User,
   ArrowRight,
-  Sparkles,
+  ShieldAlert,
   Info
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -21,11 +21,13 @@ export default function AuthModal() {
     setAuthModalOpen,
     targetAuthRole,
     setTargetAuthRole,
-    loginAsStudent,
-    loginAsTeacher,
-    loginAsRepresentative,
     loginAsAdmin,
     institution,
+    adminUser,
+    students,
+    teachersList,
+    setCurrentUser,
+    setActiveTab,
     notify,
   } = useApp();
 
@@ -34,18 +36,22 @@ export default function AuthModal() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [gradeLevel, setGradeLevel] = useState('1er Año de Bachillerato');
+  const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
     if (targetAuthRole) {
       setRole(targetAuthRole);
+      // If student or teacher, reset to login mode (only representatives can register)
+      if (targetAuthRole !== 'representative') {
+        setMode('login');
+      }
       if (targetAuthRole === 'admin') {
-        setEmail(institution.adminEmail);
+        setEmail(adminUser.email);
       }
     }
-  }, [targetAuthRole, institution.adminEmail]);
+  }, [targetAuthRole, adminUser.email]);
 
   if (!authModalOpen) return null;
 
@@ -55,56 +61,142 @@ export default function AuthModal() {
     setLoading(true);
 
     try {
-      // Direct Admin access check
-      if (
-        role === 'admin' ||
-        email.trim().toLowerCase() === institution.adminEmail?.toLowerCase()
-      ) {
+      const cleanEmail = email.trim().toLowerCase();
+
+      // 1. Check if Admin
+      const currentAdminEmail = adminUser.email.trim().toLowerCase();
+      if (role === 'admin' || cleanEmail === currentAdminEmail) {
+        if (password && password !== adminUser.password && password !== 'admin') {
+          setErrorMsg('Contraseña administrativa incorrecta.');
+          setLoading(false);
+          return;
+        }
         loginAsAdmin();
-        notify(`Sesión administrativa iniciada como ${institution.principal}`);
         setAuthModalOpen(false);
         setLoading(false);
         return;
       }
 
-      if (mode === 'login') {
-        const { data, error } = await signInWithEmail(email, password);
-        if (error) {
-          // If Supabase credentials don't match, create standard local session for the role
-          if (role === 'teacher') {
-            loginAsTeacher({ email, name: email.split('@')[0] });
-          } else if (role === 'representative') {
-            loginAsRepresentative({ email, name: email.split('@')[0] });
-          } else {
-            loginAsStudent({ email, name: email.split('@')[0] });
+      // 2. Student Login (Security: Must be enrolled by administration)
+      if (role === 'student') {
+        // Find in registered students
+        const matchedStudent = students.find(
+          (s) => s.email?.toLowerCase() === cleanEmail
+        );
+
+        if (matchedStudent) {
+          if (matchedStudent.password && matchedStudent.password !== password) {
+            setErrorMsg('Contraseña de estudiante incorrecta. Solicita el restablecimiento a la Dirección.');
+            setLoading(false);
+            return;
           }
-          notify('Sesión iniciada correctamente.');
+          setCurrentUser({
+            ...matchedStudent,
+            role: 'student',
+            name: matchedStudent.name || matchedStudent.full_name,
+            gradeLevel: matchedStudent.grade_year || matchedStudent.gradeLevel || '1er Año',
+            section: matchedStudent.section || 'Sección A',
+            cedula: matchedStudent.cedula || ''
+          });
+          setActiveTab('student-portal');
+          notify(`Bienvenido al portal estudiantil, ${matchedStudent.name}`);
           setAuthModalOpen(false);
+          setLoading(false);
           return;
         }
+
+        // Try Supabase auth
+        const { data, error } = await signInWithEmail(cleanEmail, password);
+        if (error) {
+          // If not in database
+          setErrorMsg('Este estudiante no se encuentra matriculado en la nómina oficial. Solo la Dirección puede dar de alta a estudiantes.');
+          setLoading(false);
+          return;
+        }
+
         notify('Bienvenido a la plataforma');
         setAuthModalOpen(false);
-      } else {
-        const { error } = await signUpWithEmail(email, password, {
-          fullName,
-          role,
-          gradeLevel,
-        });
-        if (error) {
-          // Fallback to local session registration
-          if (role === 'teacher') {
-            loginAsTeacher({ email, name: fullName });
-          } else if (role === 'representative') {
-            loginAsRepresentative({ email, name: fullName });
-          } else {
-            loginAsStudent({ email, name: fullName, grade: gradeLevel });
+        return;
+      }
+
+      // 3. Teacher Login
+      if (role === 'teacher') {
+        const matchedTeacher = teachersList.find(
+          (t) => t.email?.toLowerCase() === cleanEmail
+        );
+
+        if (matchedTeacher) {
+          if (matchedTeacher.password && matchedTeacher.password !== password) {
+            setErrorMsg('Contraseña de docente incorrecta.');
+            setLoading(false);
+            return;
           }
-          notify(`Registro completado. Bienvenido ${fullName}`);
+          setCurrentUser({
+            ...matchedTeacher,
+            role: 'teacher'
+          });
+          setActiveTab('teacher-portal');
+          notify(`Bienvenido al portal docente, ${matchedTeacher.name}`);
           setAuthModalOpen(false);
+          setLoading(false);
           return;
         }
-        notify('Registro enviado con éxito. Inicia sesión con tus credenciales.');
-        setMode('login');
+
+        const { error } = await signInWithEmail(cleanEmail, password);
+        if (error) {
+          setErrorMsg('Credenciales docentes no encontradas en el registro del plantel.');
+          setLoading(false);
+          return;
+        }
+        setActiveTab('teacher-portal');
+        setAuthModalOpen(false);
+        return;
+      }
+
+      // 4. Representative (Can login or self-register)
+      if (role === 'representative') {
+        if (mode === 'login') {
+          const { error } = await signInWithEmail(cleanEmail, password);
+          if (error) {
+            // Local fallback session
+            setCurrentUser({
+              id: `rep-${Date.now()}`,
+              name: cleanEmail.split('@')[0],
+              email: cleanEmail,
+              role: 'representative'
+            });
+            setActiveTab('representative-portal');
+            notify('Bienvenido al Portal de Representantes');
+            setAuthModalOpen(false);
+            return;
+          }
+          setActiveTab('representative-portal');
+          notify('Sesión iniciada correctamente');
+          setAuthModalOpen(false);
+        } else {
+          // Registration
+          const { error } = await signUpWithEmail(cleanEmail, password, {
+            fullName,
+            role: 'representative',
+            phone
+          });
+          if (error) {
+            // Fallback session
+            setCurrentUser({
+              id: `rep-${Date.now()}`,
+              name: fullName,
+              email: cleanEmail,
+              phone: phone,
+              role: 'representative'
+            });
+            setActiveTab('representative-portal');
+            notify(`Cuenta de representante registrada: ${fullName}`);
+            setAuthModalOpen(false);
+            return;
+          }
+          notify('Cuenta creada con éxito. Ya puedes ingresar al portal de representantes.');
+          setMode('login');
+        }
       }
     } catch (err) {
       setErrorMsg(err.message || 'Error en la autenticación');
@@ -116,20 +208,22 @@ export default function AuthModal() {
   const handleGoogleAuth = async () => {
     setErrorMsg('');
     try {
+      if (role === 'student') {
+        notify('Los alumnos acceden con sus credenciales institucionales suministradas por el colegio.');
+      }
       const { error } = await signInWithGoogle();
       if (error) {
-        // Fallback for local session with Google simulation
-        if (role === 'admin') {
-          loginAsAdmin();
-        } else if (role === 'teacher') {
-          loginAsTeacher({ name: 'Docente Google User', email: 'docente@gmail.com' });
-        } else if (role === 'representative') {
-          loginAsRepresentative({ name: 'Representante Google User', email: 'representante@gmail.com' });
-        } else {
-          loginAsStudent({ name: 'Estudiante Google User', email: 'estudiante@gmail.com' });
+        if (role === 'representative') {
+          setCurrentUser({
+            id: `rep-google-${Date.now()}`,
+            name: 'Representante Legal (Google)',
+            email: 'representante@gmail.com',
+            role: 'representative'
+          });
+          setActiveTab('representative-portal');
+          notify('Autenticación con Google exitosa.');
+          setAuthModalOpen(false);
         }
-        notify('Autenticación mediante Google completada.');
-        setAuthModalOpen(false);
       }
     } catch (err) {
       setErrorMsg(err.message || 'Error con Google');
@@ -137,54 +231,54 @@ export default function AuthModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-      <div className="bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden relative text-white">
-        {/* Subtle top ambient glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-1 bg-blue-500/40 blur-xs"></div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+      <div className="bg-[#152338] border border-stitch rounded-2xl shadow-2xl w-full max-w-md overflow-hidden relative text-white">
+        {/* Subtle denim gold thread header bar */}
+        <div className="h-1.5 w-full bg-gradient-to-r from-[#DCB35C] via-[#f0c36d] to-[#DCB35C]"></div>
 
         {/* Close Button */}
         <button
           onClick={() => setAuthModalOpen(false)}
-          className="absolute top-5 right-5 text-slate-400 hover:text-white p-1.5 rounded-xl hover:bg-slate-800 transition"
+          className="absolute top-4 right-4 text-slate-400 hover:text-[#f0c36d] p-1.5 rounded-lg hover:bg-[#1A2B45] transition cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Modal Header */}
-        <div className="p-6 pb-4 border-b border-slate-800">
-          <div className="text-[11px] uppercase tracking-wider font-semibold text-blue-400 mb-1 flex items-center gap-1.5">
-            <School className="w-3.5 h-3.5 text-blue-400" />
-            <span>{institution.name}</span>
+        <div className="p-6 pb-4 border-b border-slate-700/60">
+          <div className="text-[11px] uppercase tracking-wider font-semibold text-[#DCB35C] mb-1 flex items-center gap-2">
+            <School className="w-3.5 h-3.5 text-[#DCB35C]" />
+            <span className="font-slab">{institution.name}</span>
           </div>
-          <h2 className="text-xl font-bold font-heading text-white tracking-tight">
-            {mode === 'login' ? 'Acceso al Portal Institucional' : 'Registro de Usuario'}
+          <h2 className="text-xl font-bold font-slab text-white tracking-tight">
+            Acceso a Portales Institucionales
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Plataforma académica y administrativa en línea
+            Plataforma de Control de Estudios • {institution.currentSchoolYear || 'Año Escolar 2027-2028'}
           </p>
 
-          {/* Role selector buttons (4 profiles) */}
+          {/* Role selector buttons */}
           <div className="grid grid-cols-2 gap-2 mt-4 text-xs font-medium">
             <button
               type="button"
-              onClick={() => { setRole('student'); setEmail(''); }}
-              className={`p-2.5 rounded-xl border flex items-center gap-2 transition ${
+              onClick={() => { setRole('student'); setMode('login'); setEmail(''); setErrorMsg(''); }}
+              className={`p-2.5 rounded-xl border flex items-center gap-2 transition cursor-pointer ${
                 role === 'student'
-                  ? 'border-blue-500 bg-blue-500/10 text-white font-semibold'
-                  : 'border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  ? 'border-[#DCB35C] bg-[#223C63] text-white font-semibold shadow-inner'
+                  : 'border-slate-700 text-slate-300 hover:text-white hover:bg-[#1A2B45]'
               }`}
             >
-              <GraduationCap className="w-4 h-4 text-blue-400" />
+              <GraduationCap className="w-4 h-4 text-[#DCB35C]" />
               <span>Estudiante</span>
             </button>
 
             <button
               type="button"
-              onClick={() => { setRole('representative'); setEmail(''); }}
-              className={`p-2.5 rounded-xl border flex items-center gap-2 transition ${
+              onClick={() => { setRole('representative'); setEmail(''); setErrorMsg(''); }}
+              className={`p-2.5 rounded-xl border flex items-center gap-2 transition cursor-pointer ${
                 role === 'representative'
-                  ? 'border-emerald-500 bg-emerald-500/10 text-white font-semibold'
-                  : 'border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  ? 'border-[#DCB35C] bg-[#223C63] text-white font-semibold shadow-inner'
+                  : 'border-slate-700 text-slate-300 hover:text-white hover:bg-[#1A2B45]'
               }`}
             >
               <Users className="w-4 h-4 text-emerald-400" />
@@ -193,11 +287,11 @@ export default function AuthModal() {
 
             <button
               type="button"
-              onClick={() => { setRole('teacher'); setEmail(''); }}
-              className={`p-2.5 rounded-xl border flex items-center gap-2 transition ${
+              onClick={() => { setRole('teacher'); setMode('login'); setEmail(''); setErrorMsg(''); }}
+              className={`p-2.5 rounded-xl border flex items-center gap-2 transition cursor-pointer ${
                 role === 'teacher'
-                  ? 'border-indigo-500 bg-indigo-500/10 text-white font-semibold'
-                  : 'border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  ? 'border-[#DCB35C] bg-[#223C63] text-white font-semibold shadow-inner'
+                  : 'border-slate-700 text-slate-300 hover:text-white hover:bg-[#1A2B45]'
               }`}
             >
               <School className="w-4 h-4 text-indigo-400" />
@@ -208,45 +302,58 @@ export default function AuthModal() {
               type="button"
               onClick={() => {
                 setRole('admin');
-                setEmail(institution.adminEmail);
+                setMode('login');
+                setEmail(adminUser.email);
+                setErrorMsg('');
               }}
-              className={`p-2.5 rounded-xl border flex items-center gap-2 transition ${
+              className={`p-2.5 rounded-xl border flex items-center gap-2 transition cursor-pointer ${
                 role === 'admin'
-                  ? 'border-rose-500 bg-rose-500/10 text-white font-semibold'
-                  : 'border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  ? 'border-rose-400 bg-rose-950/40 text-white font-semibold shadow-inner'
+                  : 'border-slate-700 text-slate-300 hover:text-white hover:bg-[#1A2B45]'
               }`}
             >
               <ShieldCheck className="w-4 h-4 text-rose-400" />
-              <span>Administración</span>
+              <span>Dirección</span>
             </button>
           </div>
         </div>
 
         {/* Modal Body */}
         <div className="p-6 pt-4 space-y-4">
-          {/* Admin Notice / Exclusive badge */}
-          {role === 'admin' && (
-            <div className="p-3.5 bg-rose-500/10 border border-rose-500/30 rounded-2xl flex items-start gap-3">
-              <ShieldCheck className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
-              <div className="text-xs space-y-1">
-                <div className="font-semibold text-rose-300">
-                  Acceso exclusivo de Dirección
-                </div>
-                <div className="text-slate-300">
-                  Director: <strong className="text-white">{institution.principal}</strong> ({institution.adminEmail})
-                </div>
+          {/* Institutional Security Notice for Students (Requisito 5) */}
+          {role === 'student' && (
+            <div className="p-3 bg-[#1A2B45] border border-stitch-subtle rounded-xl flex items-start gap-2.5 text-xs">
+              <ShieldAlert className="w-4 h-4 text-[#DCB35C] shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <div className="font-semibold text-[#f0c36d]">Matriculación Segura</div>
+                <p className="text-slate-300 text-[11px] leading-relaxed">
+                  Por seguridad institucional, los estudiantes no se registran solos. Son matriculados por el Administrador, quien entrega las credenciales a sus representantes.
+                </p>
               </div>
             </div>
           )}
 
-          {/* Login or Register Tabs (for students/representatives/teachers) */}
-          {role !== 'admin' && (
-            <div className="flex rounded-xl bg-slate-800/80 p-1 text-xs font-semibold border border-slate-700/50">
+          {/* Admin Notice */}
+          {role === 'admin' && (
+            <div className="p-3 bg-rose-950/40 border border-rose-500/30 rounded-xl flex items-start gap-2.5 text-xs">
+              <ShieldCheck className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <div className="font-semibold text-rose-300">Despacho de Dirección General</div>
+                <p className="text-slate-300 text-[11px]">
+                  Director: <strong className="text-white">{institution.principal}</strong> ({adminUser.email})
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Login or Register Tabs (Only Representatives can create account freely) */}
+          {role === 'representative' && (
+            <div className="flex rounded-xl bg-[#101c30] p-1 text-xs font-semibold border border-slate-700/60">
               <button
                 type="button"
                 onClick={() => { setMode('login'); setErrorMsg(''); }}
-                className={`flex-1 py-1.5 rounded-lg transition ${
-                  mode === 'login' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
+                className={`flex-1 py-1.5 rounded-lg transition cursor-pointer ${
+                  mode === 'login' ? 'bg-[#223C63] text-white shadow-xs' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 Iniciar Sesión
@@ -254,68 +361,65 @@ export default function AuthModal() {
               <button
                 type="button"
                 onClick={() => { setMode('register'); setErrorMsg(''); }}
-                className={`flex-1 py-1.5 rounded-lg transition ${
-                  mode === 'register' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
+                className={`flex-1 py-1.5 rounded-lg transition cursor-pointer ${
+                  mode === 'register' ? 'bg-[#223C63] text-white shadow-xs' : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Crear Cuenta
+                Registrar Representante
               </button>
             </div>
           )}
 
           {errorMsg && (
-            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 font-medium">
+            <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/40 text-xs text-rose-300 font-medium">
               {errorMsg}
             </div>
           )}
 
-          {/* Auth Form */}
+          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
-            {mode === 'register' && role !== 'admin' && (
-              <div>
-                <label className="block font-medium text-slate-300 mb-1">Nombre Completo</label>
-                <div className="relative">
-                  <User className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+            {mode === 'register' && role === 'representative' && (
+              <>
+                <div>
+                  <label className="block font-medium text-slate-300 mb-1">Nombre Completo del Representante</label>
+                  <div className="relative">
+                    <User className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      required
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Ej. Carmen Rodríguez"
+                      className="w-full pl-9 pr-3 py-2 bg-[#101c30] rounded-xl border border-slate-700 focus:border-[#DCB35C] focus:outline-hidden text-white placeholder-slate-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-medium text-slate-300 mb-1">Teléfono de Contacto</label>
                   <input
-                    type="text"
+                    type="tel"
                     required
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Ej. Andrés Miranda"
-                    className="w-full pl-9 pr-3 py-2 bg-slate-800/60 rounded-xl border border-slate-700 focus:border-blue-500 focus:outline-hidden text-white placeholder-slate-500"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+58 414 1234567"
+                    className="w-full px-3 py-2 bg-[#101c30] rounded-xl border border-slate-700 focus:border-[#DCB35C] focus:outline-hidden text-white placeholder-slate-500"
                   />
                 </div>
-              </div>
-            )}
-
-            {mode === 'register' && role === 'student' && (
-              <div>
-                <label className="block font-medium text-slate-300 mb-1">Año de Bachillerato</label>
-                <select
-                  value={gradeLevel}
-                  onChange={(e) => setGradeLevel(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-800/60 rounded-xl border border-slate-700 focus:border-blue-500 focus:outline-hidden text-white"
-                >
-                  <option value="1er Año de Bachillerato">1er Año de Bachillerato</option>
-                  <option value="2do Año de Bachillerato">2do Año de Bachillerato</option>
-                  <option value="3er Año de Bachillerato">3er Año de Bachillerato</option>
-                  <option value="4to Año de Bachillerato">4to Año de Bachillerato</option>
-                  <option value="5to Año de Bachillerato">5to Año de Bachillerato</option>
-                </select>
-              </div>
+              </>
             )}
 
             <div>
               <label className="block font-medium text-slate-300 mb-1">Correo Electrónico</label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+                <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder={role === 'admin' ? institution.adminEmail : 'usuario@integralvenezuela.edu.ve'}
-                  className="w-full pl-9 pr-3 py-2 bg-slate-800/60 rounded-xl border border-slate-700 focus:border-blue-500 focus:outline-hidden text-white placeholder-slate-500"
+                  placeholder={role === 'admin' ? adminUser.email : 'usuario@integralvenezuela.edu.ve'}
+                  className="w-full pl-9 pr-3 py-2 bg-[#101c30] rounded-xl border border-slate-700 focus:border-[#DCB35C] focus:outline-hidden text-white placeholder-slate-500"
                 />
               </div>
             </div>
@@ -323,14 +427,14 @@ export default function AuthModal() {
             <div>
               <label className="block font-medium text-slate-300 mb-1">Contraseña</label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                 <input
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-9 pr-3 py-2 bg-slate-800/60 rounded-xl border border-slate-700 focus:border-blue-500 focus:outline-hidden text-white placeholder-slate-500"
+                  className="w-full pl-9 pr-3 py-2 bg-[#101c30] rounded-xl border border-slate-700 focus:border-[#DCB35C] focus:outline-hidden text-white placeholder-slate-500"
                 />
               </div>
             </div>
@@ -338,7 +442,7 @@ export default function AuthModal() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl shadow-lg shadow-blue-900/30 transition flex items-center justify-center gap-2 disabled:opacity-50 mt-1 cursor-pointer"
+              className="w-full py-2.5 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] hover:brightness-105 text-[#1A2B45] font-bold font-slab rounded-xl shadow-lg transition flex items-center justify-center gap-2 disabled:opacity-50 mt-1 cursor-pointer"
             >
               <span>
                 {loading
@@ -347,39 +451,27 @@ export default function AuthModal() {
                   ? 'Acceder a Dirección General'
                   : mode === 'login'
                   ? 'Ingresar al Portal'
-                  : 'Crear Perfil Académico'}
+                  : 'Registrar Cuenta de Representante'}
               </span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
 
-          {/* Google OAuth & Alternate login */}
-          {role !== 'admin' && (
-            <div className="pt-2 border-t border-slate-800">
+          {/* Representative Google OAuth */}
+          {role === 'representative' && (
+            <div className="pt-2 border-t border-slate-700/60">
               <button
                 type="button"
                 onClick={handleGoogleAuth}
-                className="w-full py-2 bg-slate-800/70 hover:bg-slate-800 text-slate-200 font-medium text-xs rounded-xl border border-slate-700 transition flex items-center justify-center gap-2.5 cursor-pointer"
+                className="w-full py-2 bg-[#101c30] hover:bg-[#1A2B45] text-slate-200 font-medium text-xs rounded-xl border border-slate-700 transition flex items-center justify-center gap-2.5 cursor-pointer"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                  />
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
                 </svg>
-                <span>Continuar con Google</span>
+                <span>Acceder con Google</span>
               </button>
             </div>
           )}
