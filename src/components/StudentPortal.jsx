@@ -19,7 +19,9 @@ import {
   AlertCircle,
   IdCard,
   Sparkles,
-  Save
+  Save,
+  X,
+  School
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import CertificateModal from './CertificateModal';
@@ -391,14 +393,14 @@ export default function StudentPortal() {
             </div>
 
             {/* Official Venezuelan High School ID Card */}
-            <div className="bg-gradient-to-br from-[#1A2B45] via-[#223C63] to-[#101c30] rounded-3xl p-6 border-2 border-[#DCB35C] shadow-2xl text-white relative overflow-hidden">
+            <div className="bg-gradient-to-br from-[#1A2B45] via-[#223C63] to-[#101c30] rounded-xl p-6 border-2 border-[#DCB35C] shadow-2xl text-white relative overflow-hidden">
               <div className="absolute top-0 right-0 w-36 h-36 bg-[#DCB35C]/10 rounded-full blur-2xl pointer-events-none"></div>
 
-              {/* Card Header */}
+              {/* Card Header with Official School Crest */}
               <div className="flex items-center justify-between border-b border-[#DCB35C]/30 pb-3 mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-[#101c30] border border-[#DCB35C]/50 flex items-center justify-center text-[#DCB35C]">
-                    <School className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-lg bg-[#101c30] border border-[#DCB35C]/50 flex items-center justify-center p-1 shrink-0 shadow-sm">
+                    <img src="/logo.png" alt="Crest" className="w-8 h-8 object-contain" />
                   </div>
                   <div>
                     <div className="text-[10px] uppercase font-bold text-[#f0c36d] tracking-widest font-slab">República Bolivariana de Venezuela</div>
@@ -414,7 +416,7 @@ export default function StudentPortal() {
                   <img
                     src={student.avatar}
                     alt={student.name}
-                    className="w-24 h-28 rounded-xl object-cover border-2 border-white shadow-md"
+                    className="w-24 h-28 rounded-lg object-cover border-2 border-white shadow-md"
                   />
                   <div className="absolute -bottom-2 inset-x-0 bg-[#DCB35C] text-[#1A2B45] text-[9px] font-bold uppercase text-center rounded py-0.5">
                     Estudiante
@@ -447,15 +449,15 @@ export default function StudentPortal() {
 
               {/* Card Footer Barcode & DEA */}
               <div className="pt-3 border-t border-[#DCB35C]/30 flex items-center justify-between text-[10px] text-slate-400 font-mono">
-                <span>CÓDIGO DEA • CIV-EST-{student.id.slice(-6)}</span>
-                <span className="italic">"Enseñando a vivir"</span>
+                <span>CÓDIGO DEA • CIV-EST-{String(student?.id || '000000').slice(-6).toUpperCase()}</span>
+                <span className="text-[#f0c36d] font-medium">Matrícula Regular</span>
               </div>
             </div>
 
             <div className="flex justify-center gap-3">
               <button
                 onClick={() => window.print()}
-                className="px-5 py-2.5 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] rounded-xl text-xs font-bold font-slab flex items-center gap-2 shadow-lg cursor-pointer"
+                className="px-5 py-2.5 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] rounded-lg text-xs font-bold font-slab flex items-center gap-2 shadow-lg cursor-pointer"
               >
                 <Printer className="w-4 h-4" />
                 <span>Imprimir Carnet Físico</span>
@@ -465,7 +467,7 @@ export default function StudentPortal() {
                   setActiveSubTab('profile');
                   setEditingProfile(true);
                 }}
-                className="px-4 py-2.5 bg-[#1A2B45] hover:bg-[#223C63] text-white border border-stitch-subtle rounded-xl text-xs font-bold font-slab cursor-pointer"
+                className="px-4 py-2.5 bg-[#1A2B45] hover:bg-[#223C63] text-white border border-stitch-subtle rounded-lg text-xs font-bold font-slab cursor-pointer"
               >
                 Actualizar Datos del Carnet
               </button>
@@ -482,7 +484,7 @@ export default function StudentPortal() {
             </div>
 
             {schedules.length === 0 ? (
-              <div className="p-8 text-center rounded-2xl bg-[#101c30] border-stitch-subtle">
+              <div className="p-8 text-center rounded-lg bg-[#101c30] border-stitch-subtle">
                 <Clock className="w-8 h-8 text-slate-500 mx-auto mb-2" />
                 <div className="font-bold text-slate-300 font-slab">Horario no publicado</div>
                 <p className="text-xs text-slate-500 mt-1">Control de Estudios publicará el cronograma del {activeYear}.</p>
@@ -492,24 +494,123 @@ export default function StudentPortal() {
                 {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'].map((day) => {
                   const daySchedules = schedules.filter((s) => s.day_of_week === day || s.day === day);
                   return (
-                    <div key={day} className="p-3.5 rounded-xl bg-[#101c30] border border-slate-700/80 space-y-2.5">
+                    <div key={day} className="p-3.5 rounded-lg bg-[#101c30] border border-slate-700/80 space-y-2.5">
                       <div className="font-bold font-slab text-sm text-[#f0c36d] border-b border-slate-800 pb-1">{day}</div>
                       {daySchedules.length === 0 ? (
                         <div className="text-[11px] text-slate-500 italic py-2">Sin bloques</div>
                       ) : (
-                        daySchedules.map((b) => (
-                          <div key={b.id} className="p-2 rounded-lg bg-[#16253c] border border-slate-700 text-xs">
-                            <div className="font-semibold text-white">{b.subject_name || b.subject || 'Actividad'}</div>
-                            <div className="text-[10px] text-slate-400">{b.start_time} - {b.end_time || b.time}</div>
-                            {b.classroom_name && (
-                              <div className="text-[10px] text-[#DCB35C]">Aula: {b.classroom_name}</div>
-                            )}
-                          </div>
-                        ))
+                        daySchedules.map((b) => {
+                          const isRecess = b.entry_type === 'recess' || b.subject_name?.toLowerCase().includes('receso') || b.subject?.toLowerCase().includes('receso');
+                          const isDayOff = b.entry_type === 'day_off';
+                          const isFree = b.entry_type === 'free_module';
+                          const title = isRecess ? 'Receso' : (isDayOff ? 'Día Libre' : (isFree ? 'Módulo Libre' : (b.subject_name || b.subject || 'Clase Regular')));
+
+                          return (
+                            <div
+                              key={b.id}
+                              className={`p-2 rounded-lg border text-xs space-y-1 ${
+                                isRecess
+                                  ? 'bg-amber-950/30 border-amber-500/40 text-amber-200'
+                                  : isDayOff
+                                  ? 'bg-rose-950/30 border-rose-500/40 text-rose-200'
+                                  : isFree
+                                  ? 'bg-blue-950/30 border-blue-500/40 text-blue-200'
+                                  : 'bg-[#16253c] border-slate-700 text-slate-200'
+                              }`}
+                            >
+                              <div className="font-semibold text-white flex items-center justify-between">
+                                <span>{title}</span>
+                                {isRecess && (
+                                  <span className="text-[9px] bg-amber-500/20 text-[#f0c36d] px-1.5 py-0.5 rounded">
+                                    Receso
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[10px] text-slate-400 font-mono">{b.start_time || b.time?.split('-')[0]?.trim()} - {b.end_time || b.time?.split('-')[1]?.trim() || b.time}</div>
+                              {b.classroom_name && (
+                                <div className="text-[10px] text-[#DCB35C]">Aula: {b.classroom_name}</div>
+                              )}
+                              {b.notes && (
+                                <div className="text-[10px] text-slate-400 italic">{b.notes}</div>
+                              )}
+                            </div>
+                          );
+                        })
                       )}
                     </div>
                   );
                 })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* SUBTAB: EVALUATION PLANS */}
+        {activeSubTab === 'plans' && (
+          <div className="denim-card p-6 space-y-5 animate-fade-in">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-700/60 pb-3">
+              <div>
+                <h2 className="text-base font-bold font-slab text-white">Planes de Evaluación</h2>
+                <p className="text-xs text-slate-400">
+                  Cronograma pedagógico, instrumentos y ponderaciones para {student.gradeLevel} ({activeYear})
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {['1er Lapso', '2do Lapso', '3er Lapso'].map((term) => (
+                  <button
+                    key={term}
+                    onClick={() => setSelectedTerm(term)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold font-slab transition cursor-pointer ${
+                      selectedTerm === term
+                        ? 'bg-[#223C63] text-white border border-[#DCB35C]/50 shadow-xs'
+                        : 'bg-[#152338] text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {term}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {evaluationPlans.length === 0 ? (
+              <div className="p-8 text-center rounded-lg bg-[#101c30] border-stitch-subtle">
+                <Calendar className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+                <div className="font-bold text-slate-300 font-slab">No hay planes de evaluación cargados</div>
+                <p className="text-xs text-slate-500 mt-1">Los docentes publicarán las fechas y ponderaciones de cada unidad aquí.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {evaluationPlans.map((plan) => (
+                  <div key={plan.id} className="p-4 rounded-lg bg-[#101c30] border border-slate-700/80 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="denim-patch px-2 py-0.5 text-[10px]">
+                          {plan.subjectName || plan.subject || 'Asignatura'}
+                        </span>
+                        <h3 className="font-bold text-white text-sm font-slab mt-1.5">{plan.unit_title || plan.title || 'Unidad de Evaluación'}</h3>
+                      </div>
+                      <span className="px-2.5 py-1 rounded bg-[#223C63] text-[#f0c36d] font-mono text-xs font-bold border border-[#DCB35C]/30 shrink-0">
+                        {plan.percentage || 20}%
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs text-slate-300 pt-2 border-t border-slate-800">
+                      <div>
+                        <span className="text-[10px] text-slate-400 uppercase block">Estrategia:</span>
+                        <span>{plan.strategy || 'Evaluación Escrita'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 uppercase block">Instrumento:</span>
+                        <span>{plan.instrument || 'Escala de Estimación'}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center text-[11px] text-slate-400 pt-1 font-mono">
+                      <span>Fecha: {plan.evaluation_date || plan.date || 'Por anunciar'}</span>
+                      <span className="text-[#DCB35C] font-semibold">{plan.lapso ? `${plan.lapso}° Lapso` : selectedTerm}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -778,12 +879,12 @@ export default function StudentPortal() {
       {/* Memory Upload Modal */}
       {memoryModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
-          <div className="bg-[#152338] border border-stitch rounded-2xl w-full max-w-md p-6">
+          <div className="bg-[#152338] border border-stitch rounded-lg w-full max-w-md p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-base font-bold font-slab text-white">
                 Subir Fotografía al Anuario
               </h3>
-              <button onClick={() => setMemoryModalOpen(false)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setMemoryModalOpen(false)} className="text-slate-400 hover:text-white cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -797,7 +898,7 @@ export default function StudentPortal() {
                   placeholder="Ej. Aniversario del Colegio / Feria Científica"
                   value={memoryForm.title}
                   onChange={(e) => setMemoryForm({ ...memoryForm, title: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:outline-hidden focus:border-[#DCB35C]"
+                  className="w-full px-3 py-2 rounded-lg bg-[#101c30] border border-slate-700 text-white focus:outline-hidden focus:border-[#DCB35C]"
                 />
               </div>
 
@@ -806,7 +907,7 @@ export default function StudentPortal() {
                 <select
                   value={memoryForm.category}
                   onChange={(e) => setMemoryForm({ ...memoryForm, category: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:outline-hidden focus:border-[#DCB35C]"
+                  className="w-full px-3 py-2 rounded-lg bg-[#101c30] border border-slate-700 text-white focus:outline-hidden focus:border-[#DCB35C]"
                 >
                   <option value="Proyectos">Proyectos y Ciencia</option>
                   <option value="Deportes">Deportes y Juegos</option>
@@ -822,7 +923,7 @@ export default function StudentPortal() {
                   <button
                     type="button"
                     onClick={() => memoryFileInputRef.current?.click()}
-                    className="px-3.5 py-2 bg-[#223C63] hover:bg-[#1A2B45] border border-[#DCB35C]/50 rounded-xl text-[#f0c36d] font-bold font-slab flex items-center gap-2 cursor-pointer"
+                    className="px-3.5 py-2 bg-[#223C63] hover:bg-[#1A2B45] border border-[#DCB35C]/50 rounded-lg text-[#f0c36d] font-bold font-slab flex items-center gap-2 cursor-pointer"
                   >
                     <Upload className="w-3.5 h-3.5" />
                     <span>Seleccionar Archivo</span>
@@ -840,7 +941,7 @@ export default function StudentPortal() {
                 </div>
 
                 {memoryImagePreview && (
-                  <div className="mt-2.5 h-28 rounded-xl overflow-hidden border border-slate-700">
+                  <div className="mt-2.5 h-28 rounded-lg overflow-hidden border border-slate-700">
                     <img src={memoryImagePreview} alt="Preview" className="w-full h-full object-cover" />
                   </div>
                 )}
@@ -854,7 +955,7 @@ export default function StudentPortal() {
                   placeholder="Relata qué vivieron en ese momento..."
                   value={memoryForm.description}
                   onChange={(e) => setMemoryForm({ ...memoryForm, description: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:outline-hidden focus:border-[#DCB35C]"
+                  className="w-full px-3 py-2 rounded-lg bg-[#101c30] border border-slate-700 text-white focus:outline-hidden focus:border-[#DCB35C]"
                 ></textarea>
               </div>
 
@@ -868,7 +969,7 @@ export default function StudentPortal() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab rounded-xl shadow-md cursor-pointer"
+                  className="px-4 py-2 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab rounded-lg shadow-md cursor-pointer"
                 >
                   Publicar Recuerdo
                 </button>

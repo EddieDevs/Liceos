@@ -101,9 +101,9 @@ export default function LandingPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <button
                     onClick={() => openAuth('student')}
-                    className="p-4 bg-[#1A2B45]/90 hover:bg-[#223C63] rounded-2xl text-left border border-stitch-subtle hover:border-[#DCB35C] transition group cursor-pointer shadow-md"
+                    className="p-3.5 bg-[#1A2B45]/90 hover:bg-[#223C63] rounded-lg text-left border border-stitch-subtle hover:border-[#DCB35C] transition group cursor-pointer shadow-md"
                   >
-                    <div className="w-8 h-8 rounded-xl bg-[#223C63] border border-[#DCB35C]/40 flex items-center justify-center mb-2.5 group-hover:scale-105 transition">
+                    <div className="w-8 h-8 rounded-lg bg-[#223C63] border border-[#DCB35C]/40 flex items-center justify-center mb-2.5 group-hover:scale-105 transition">
                       <GraduationCap className="w-4 h-4 text-[#DCB35C]" />
                     </div>
                     <div className="font-bold font-slab text-xs text-white group-hover:text-[#f0c36d] transition">Estudiantes</div>
@@ -112,9 +112,9 @@ export default function LandingPage() {
 
                   <button
                     onClick={() => openAuth('representative')}
-                    className="p-4 bg-[#1A2B45]/90 hover:bg-[#223C63] rounded-2xl text-left border border-stitch-subtle hover:border-emerald-400 transition group cursor-pointer shadow-md"
+                    className="p-3.5 bg-[#1A2B45]/90 hover:bg-[#223C63] rounded-lg text-left border border-stitch-subtle hover:border-emerald-400 transition group cursor-pointer shadow-md"
                   >
-                    <div className="w-8 h-8 rounded-xl bg-emerald-950/60 border border-emerald-500/40 flex items-center justify-center mb-2.5 group-hover:scale-105 transition">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-950/60 border border-emerald-500/40 flex items-center justify-center mb-2.5 group-hover:scale-105 transition">
                       <Users className="w-4 h-4 text-emerald-400" />
                     </div>
                     <div className="font-bold font-slab text-xs text-white group-hover:text-emerald-300 transition">Representantes</div>
@@ -123,9 +123,9 @@ export default function LandingPage() {
 
                   <button
                     onClick={() => openAuth('teacher')}
-                    className="p-4 bg-[#1A2B45]/90 hover:bg-[#223C63] rounded-2xl text-left border border-stitch-subtle hover:border-indigo-400 transition group cursor-pointer shadow-md"
+                    className="p-3.5 bg-[#1A2B45]/90 hover:bg-[#223C63] rounded-lg text-left border border-stitch-subtle hover:border-indigo-400 transition group cursor-pointer shadow-md"
                   >
-                    <div className="w-8 h-8 rounded-xl bg-indigo-950/60 border border-indigo-500/40 flex items-center justify-center mb-2.5 group-hover:scale-105 transition">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-950/60 border border-indigo-500/40 flex items-center justify-center mb-2.5 group-hover:scale-105 transition">
                       <School className="w-4 h-4 text-indigo-400" />
                     </div>
                     <div className="font-bold font-slab text-xs text-white group-hover:text-indigo-300 transition">Docentes</div>
@@ -134,9 +134,9 @@ export default function LandingPage() {
 
                   <button
                     onClick={() => openAuth('admin')}
-                    className="p-4 bg-[#1A2B45]/90 hover:bg-[#223C63] rounded-2xl text-left border border-stitch-subtle hover:border-rose-400 transition group cursor-pointer shadow-md"
+                    className="p-3.5 bg-[#1A2B45]/90 hover:bg-[#223C63] rounded-lg text-left border border-stitch-subtle hover:border-rose-400 transition group cursor-pointer shadow-md"
                   >
-                    <div className="w-8 h-8 rounded-xl bg-rose-950/60 border border-rose-500/40 flex items-center justify-center mb-2.5 group-hover:scale-105 transition">
+                    <div className="w-8 h-8 rounded-lg bg-rose-950/60 border border-rose-500/40 flex items-center justify-center mb-2.5 group-hover:scale-105 transition">
                       <ShieldCheck className="w-4 h-4 text-rose-400" />
                     </div>
                     <div className="font-bold font-slab text-xs text-white group-hover:text-rose-300 transition">Dirección</div>
@@ -148,14 +148,14 @@ export default function LandingPage() {
 
             {/* Right Campus Feature Card (Denim Frame with Copper Rivets) */}
             <div className="lg:col-span-5">
-              <div className="bg-[#1A2B45] rounded-3xl p-6 border-stitch shadow-2xl space-y-4 relative">
+              <div className="bg-[#1A2B45] rounded-xl p-6 border-stitch shadow-2xl space-y-4 relative">
                 {/* Copper corner rivets */}
                 <div className="absolute top-3 left-3 w-2.5 h-2.5 rounded-full bg-[#B87333] border border-amber-300/40 shadow-xs"></div>
                 <div className="absolute top-3 right-3 w-2.5 h-2.5 rounded-full bg-[#B87333] border border-amber-300/40 shadow-xs"></div>
                 <div className="absolute bottom-3 left-3 w-2.5 h-2.5 rounded-full bg-[#B87333] border border-amber-300/40 shadow-xs"></div>
                 <div className="absolute bottom-3 right-3 w-2.5 h-2.5 rounded-full bg-[#B87333] border border-amber-300/40 shadow-xs"></div>
 
-                <div className="rounded-2xl overflow-hidden h-60 relative group">
+                <div className="rounded-lg overflow-hidden h-60 relative group">
                   <img
                     src="https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=800&auto=format&fit=crop&q=80"
                     alt="Campus Integral Venezuela"
@@ -169,11 +169,11 @@ export default function LandingPage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 text-xs pt-1">
-                  <div className="p-3.5 rounded-xl bg-[#101c30] border border-slate-700/80">
+                  <div className="p-3.5 rounded-lg bg-[#101c30] border border-slate-700/80">
                     <div className="text-[#DCB35C] text-[10px] uppercase font-semibold tracking-wider">Director General</div>
                     <div className="font-bold text-white text-sm mt-0.5 font-slab">{institution.principal}</div>
                   </div>
-                  <div className="p-3.5 rounded-xl bg-[#101c30] border border-slate-700/80">
+                  <div className="p-3.5 rounded-lg bg-[#101c30] border border-slate-700/80">
                     <div className="text-[#DCB35C] text-[10px] uppercase font-semibold tracking-wider">Fundación</div>
                     <div className="font-bold text-white text-sm mt-0.5 font-slab">10 Nov 1989</div>
                   </div>

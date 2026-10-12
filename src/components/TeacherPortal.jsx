@@ -234,7 +234,7 @@ export default function TeacherPortal() {
               </div>
               <button
                 onClick={() => setFreeModuleModalOpen(true)}
-                className="px-3.5 py-2 bg-[#223C63] hover:bg-[#1A2B45] text-[#f0c36d] border border-[#DCB35C]/40 rounded-xl text-xs font-bold font-slab flex items-center gap-1.5 cursor-pointer"
+                className="px-3.5 py-2 bg-[#223C63] hover:bg-[#1A2B45] text-[#f0c36d] border border-[#DCB35C]/40 rounded-lg text-xs font-bold font-slab flex items-center gap-1.5 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Agregar Módulo Libre al Horario</span>
@@ -245,26 +245,44 @@ export default function TeacherPortal() {
               {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'].map((day) => {
                 const dayBlocks = schedules.filter((s) => s.day_of_week === day || s.day === day);
                 return (
-                  <div key={day} className="p-3.5 rounded-xl bg-[#101c30] border border-slate-700 space-y-2.5">
+                  <div key={day} className="p-3.5 rounded-lg bg-[#101c30] border border-slate-700 space-y-2.5">
                     <div className="font-bold font-slab text-sm text-[#f0c36d] border-b border-slate-800 pb-1">{day}</div>
                     {dayBlocks.length === 0 ? (
                       <div className="text-[11px] text-slate-500 italic py-2">Sin horas</div>
                     ) : (
-                      dayBlocks.map((b) => (
-                        <div
-                          key={b.id}
-                          className={`p-2 rounded-lg border text-xs space-y-0.5 ${
-                            b.entry_type === 'free_module'
-                              ? 'bg-blue-950/40 border-blue-400/40 text-blue-200'
-                              : 'bg-[#16253c] border-slate-700 text-slate-200'
-                          }`}
-                        >
-                          <div className="font-bold text-white text-xs">{b.subject_name || b.subject}</div>
-                          <div className="text-[10px] text-slate-400 font-mono">{b.start_time} - {b.end_time || b.time}</div>
-                          {b.classroom_name && <div className="text-[10px] text-[#DCB35C]">Aula: {b.classroom_name}</div>}
-                          {b.notes && <div className="text-[10px] text-slate-400 italic">{b.notes}</div>}
-                        </div>
-                      ))
+                      dayBlocks.map((b) => {
+                        const isRecess = b.entry_type === 'recess' || b.subject_name?.toLowerCase().includes('receso') || b.subject?.toLowerCase().includes('receso');
+                        const isDayOff = b.entry_type === 'day_off';
+                        const isFree = b.entry_type === 'free_module';
+                        const title = isRecess ? 'Receso' : (isDayOff ? 'Día Libre' : (isFree ? (b.subject_name || b.subject || 'Módulo Libre') : (b.subject_name || b.subject || 'Clase Regular')));
+
+                        return (
+                          <div
+                            key={b.id}
+                            className={`p-2 rounded-lg border text-xs space-y-0.5 ${
+                              isFree
+                                ? 'bg-blue-950/40 border-blue-400/40 text-blue-200'
+                                : isRecess
+                                ? 'bg-amber-950/40 border-amber-400/40 text-amber-200'
+                                : isDayOff
+                                ? 'bg-rose-950/40 border-rose-400/40 text-rose-200'
+                                : 'bg-[#16253c] border-slate-700 text-slate-200'
+                            }`}
+                          >
+                            <div className="font-bold text-white text-xs flex items-center justify-between">
+                              <span>{title}</span>
+                              {isRecess && (
+                                <span className="text-[9px] bg-amber-500/20 text-[#f0c36d] px-1 py-0.2 rounded font-mono">
+                                  Receso
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-slate-400 font-mono">{b.start_time || b.time?.split('-')[0]?.trim()} - {b.end_time || b.time?.split('-')[1]?.trim() || b.time}</div>
+                            {b.classroom_name && <div className="text-[10px] text-[#DCB35C]">Aula: {b.classroom_name}</div>}
+                            {b.notes && <div className="text-[10px] text-slate-400 italic">{b.notes}</div>}
+                          </div>
+                        );
+                      })
                     )}
                   </div>
                 );

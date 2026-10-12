@@ -224,7 +224,18 @@ export function AppProvider({ children }) {
 
         // Fetch sections
         const { data: secData } = await supabase.from('sections').select('*');
-        if (secData && secData.length > 0) setSections(secData);
+        if (secData && secData.length > 0) {
+          const normSections = secData.map(s => ({
+            id: s.id,
+            year: s.grade_year || s.year || '1er Año',
+            section: s.section_letter || s.section || 'A',
+            name: s.name || `${s.grade_year || '1er Año'} - Sección ${s.section_letter || 'A'}`,
+            capacity: s.capacity || 35,
+            classroom: s.classroom || 'Aula por asignar',
+            guideTeacher: s.guide_teacher || s.guideTeacher || 'Por asignar'
+          }));
+          setSections(normSections);
+        }
 
         // Fetch subjects
         const { data: subData } = await supabase.from('subjects').select('*');
@@ -240,11 +251,50 @@ export function AppProvider({ children }) {
 
         // Fetch students
         const { data: stuData } = await supabase.from('students').select('*');
-        if (stuData && stuData.length > 0) setStudents(stuData);
+        if (stuData && stuData.length > 0) {
+          const normStudents = stuData.map(s => ({
+            id: s.id,
+            name: s.full_name || s.name || `${s.first_name || ''} ${s.last_name || ''}`.trim() || 'Estudiante',
+            firstName: s.first_name || s.firstName || '',
+            lastName: s.last_name || s.lastName || '',
+            cedula: s.cedula || '',
+            gradeLevel: s.grade_year || s.gradeLevel || '1er Año',
+            grade_year: s.grade_year || s.gradeLevel || '1er Año',
+            section: s.section || 'Sección A',
+            email: s.email || '',
+            password: s.password_plain || s.password || '',
+            representativeName: s.representative_name || s.representativeName || 'Por asignar',
+            phone: s.phone || '',
+            status: s.status || 'Activo',
+            avatar: s.avatar_url || s.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'
+          }));
+          setStudents(normStudents);
+        }
 
         // Fetch schedules
         const { data: schData } = await supabase.from('schedules').select('*');
-        if (schData && schData.length > 0) setSchedules(schData);
+        if (schData && schData.length > 0) {
+          const normSchedules = schData.map(s => ({
+            id: s.id,
+            day: s.day_of_week || s.day || 'Lunes',
+            day_of_week: s.day_of_week || s.day || 'Lunes',
+            time: s.time || (s.start_time && s.end_time ? `${s.start_time.slice(0, 5)} - ${s.end_time.slice(0, 5)}` : '07:00 - 08:30 AM'),
+            start_time: s.start_time || s.time?.split('-')[0]?.trim() || '07:00',
+            end_time: s.end_time || s.time?.split('-')[1]?.trim() || '08:30',
+            classroom: s.classroom_name || s.classroom || 'Aula 01',
+            classroom_name: s.classroom_name || s.classroom || 'Aula 01',
+            subject: s.subject_name || s.subjectName || s.subject || (s.entry_type === 'recess' ? 'Receso' : (s.entry_type === 'day_off' ? 'Día Libre' : 'Clase Regular')),
+            subjectName: s.subject_name || s.subjectName || s.subject || (s.entry_type === 'recess' ? 'Receso' : (s.entry_type === 'day_off' ? 'Día Libre' : 'Clase Regular')),
+            subject_name: s.subject_name || s.subjectName || s.subject || (s.entry_type === 'recess' ? 'Receso' : (s.entry_type === 'day_off' ? 'Día Libre' : 'Clase Regular')),
+            teacher: s.teacher_name || s.teacher || 'Docente Titular',
+            teacher_name: s.teacher_name || s.teacher || 'Docente Titular',
+            gradeLevel: s.grade_level || s.gradeLevel || '1er Año - Sección A',
+            grade_level: s.grade_level || s.gradeLevel || '1er Año - Sección A',
+            entry_type: s.entry_type || 'regular',
+            notes: s.notes || ''
+          }));
+          setSchedules(normSchedules);
+        }
 
         // Fetch certificates
         const { data: certData } = await supabase.from('certificates').select('*');
@@ -472,6 +522,55 @@ export function AppProvider({ children }) {
     notify('Estudiante retirado de la matrícula');
   };
 
+  const updateStudent = async (id, updatedData) => {
+    setStudents((prev) =>
+      prev.map((s) => {
+        if (s.id === id) {
+          const merged = { ...s, ...updatedData };
+          if (updatedData.firstName || updatedData.lastName) {
+            merged.name = `${updatedData.firstName || s.firstName || ''} ${updatedData.lastName || s.lastName || ''}`.trim() || merged.name;
+          }
+          if (updatedData.gradeYear) {
+            merged.gradeLevel = updatedData.gradeYear;
+            merged.grade_year = updatedData.gradeYear;
+          }
+          return merged;
+        }
+        return s;
+      })
+    );
+
+    // If updating currently logged in user
+    if (currentUser?.id === id) {
+      setCurrentUser((prev) => ({
+        ...prev,
+        ...updatedData,
+        name: updatedData.name || (updatedData.firstName ? `${updatedData.firstName} ${updatedData.lastName || ''}`.trim() : prev.name),
+        gradeLevel: updatedData.gradeYear || updatedData.gradeLevel || prev.gradeLevel
+      }));
+    }
+
+    try {
+      if (supabaseConnected) {
+        await supabase.from('students').update({
+          first_name: updatedData.firstName,
+          last_name: updatedData.lastName,
+          full_name: updatedData.name || (updatedData.firstName ? `${updatedData.firstName} ${updatedData.lastName || ''}`.trim() : undefined),
+          cedula: updatedData.cedula,
+          grade_year: updatedData.gradeYear || updatedData.grade_year || updatedData.gradeLevel,
+          section: updatedData.section,
+          email: updatedData.email,
+          password_plain: updatedData.password,
+          representative_name: updatedData.representativeName,
+          phone: updatedData.phone,
+          avatar_url: updatedData.avatar
+        }).eq('id', id);
+      }
+    } catch (e) {}
+
+    notify('Expediente del estudiante actualizado exitosamente');
+  };
+
   // REQUISITO 6: Gestión de Profesores (Agregar, Editar, Eliminar)
   const addTeacher = async (teacherData) => {
     const newTeacher = {
@@ -576,6 +675,40 @@ export function AppProvider({ children }) {
     notify('Sección escolar eliminada');
   };
 
+  const updateSection = async (id, updatedData) => {
+    setSections((prev) =>
+      prev.map((s) => {
+        if (s.id === id) {
+          const year = updatedData.year || s.year;
+          const section = updatedData.section || s.section;
+          return {
+            ...s,
+            ...updatedData,
+            year,
+            section,
+            name: `${year} - Sección ${section}`
+          };
+        }
+        return s;
+      })
+    );
+
+    try {
+      if (supabaseConnected) {
+        await supabase.from('sections').update({
+          grade_year: updatedData.year,
+          section_letter: updatedData.section,
+          name: updatedData.year && updatedData.section ? `${updatedData.year} - Sección ${updatedData.section}` : undefined,
+          capacity: updatedData.capacity ? Number(updatedData.capacity) : undefined,
+          classroom: updatedData.classroom,
+          guide_teacher: updatedData.guideTeacher
+        }).eq('id', id);
+      }
+    } catch (e) {}
+
+    notify('Sección escolar actualizada');
+  };
+
   // REQUISITO 9: Promover al siguiente Año Escolar (Prosecución de Estudios)
   const promoteSchoolYear = async () => {
     const currentYearStr = institution.currentSchoolYear || '2027-2028';
@@ -668,6 +801,7 @@ export function AppProvider({ children }) {
     try {
       if (supabaseConnected) {
         await supabase.from('subjects').insert({
+          id: newSub.id,
           name: newSub.name,
           code: newSub.code,
           grade_level: newSub.gradeLevel,
@@ -704,23 +838,51 @@ export function AppProvider({ children }) {
 
   // SCHEDULES MANAGEMENT (Regular, Recess, Free Module, Day Off)
   const addScheduleBlock = async (schedData) => {
+    const isRecess = schedData.entry_type === 'recess';
+    const isDayOff = schedData.entry_type === 'day_off';
+    const isFreeModule = schedData.entry_type === 'free_module';
+
+    const cleanSubject = isRecess
+      ? 'Receso'
+      : (isDayOff ? 'Día Libre' : (schedData.subject || schedData.subjectName || schedData.subject_name || 'Clase Regular'));
+
     const newBlock = {
       id: `sch-${Date.now()}`,
+      day: schedData.day || schedData.day_of_week || 'Lunes',
+      day_of_week: schedData.day || schedData.day_of_week || 'Lunes',
+      time: schedData.time || '07:00 - 08:30 AM',
+      start_time: schedData.time?.split('-')[0]?.trim() || '07:00:00',
+      end_time: schedData.time?.split('-')[1]?.trim() || '08:30:00',
+      classroom: schedData.classroom || schedData.classroom_name || (isRecess ? 'Patio Central' : 'Aula 01'),
+      classroom_name: schedData.classroom || schedData.classroom_name || (isRecess ? 'Patio Central' : 'Aula 01'),
+      subject: cleanSubject,
+      subjectName: cleanSubject,
+      subject_name: cleanSubject,
+      teacher: schedData.teacher || schedData.teacher_name || (isRecess ? 'Personal de Guardia' : 'Docente Titular'),
+      teacher_name: schedData.teacher || schedData.teacher_name || (isRecess ? 'Personal de Guardia' : 'Docente Titular'),
+      gradeLevel: schedData.gradeLevel || schedData.grade_level || '1er Año - Sección A',
+      grade_level: schedData.gradeLevel || schedData.grade_level || '1er Año - Sección A',
       entry_type: schedData.entry_type || 'regular',
+      notes: schedData.notes || '',
       ...schedData
     };
+    newBlock.subject = cleanSubject;
+    newBlock.subjectName = cleanSubject;
+    newBlock.subject_name = cleanSubject;
+
     setSchedules((prev) => [...prev, newBlock]);
 
     try {
       if (supabaseConnected) {
-        await supabase.from('schedules').insert({
-          day_of_week: newBlock.day,
-          start_time: newBlock.time?.split('-')[0]?.trim() || '07:00:00',
-          end_time: newBlock.time?.split('-')[1]?.trim() || '08:30:00',
-          classroom_name: newBlock.classroom,
-          subject_name: newBlock.subjectName,
-          teacher_name: newBlock.teacher,
-          grade_level: newBlock.gradeLevel,
+        await supabase.from('schedules').upsert({
+          id: newBlock.id,
+          day_of_week: newBlock.day_of_week,
+          start_time: newBlock.start_time,
+          end_time: newBlock.end_time,
+          classroom_name: newBlock.classroom_name,
+          subject_name: newBlock.subject_name,
+          teacher_name: newBlock.teacher_name,
+          grade_level: newBlock.grade_level,
           entry_type: newBlock.entry_type,
           notes: newBlock.notes
         });
@@ -736,10 +898,42 @@ export function AppProvider({ children }) {
   };
 
   const updateScheduleBlock = async (id, updatedData) => {
-    setSchedules((prev) => prev.map((s) => (s.id === id ? { ...s, ...updatedData } : s)));
+    setSchedules((prev) =>
+      prev.map((s) => {
+        if (s.id === id) {
+          const isRecess = (updatedData.entry_type || s.entry_type) === 'recess';
+          const sub = isRecess
+            ? 'Receso'
+            : (updatedData.subject || updatedData.subjectName || s.subject || 'Clase Regular');
+          return {
+            ...s,
+            ...updatedData,
+            subject: sub,
+            subjectName: sub,
+            subject_name: sub,
+            day: updatedData.day || updatedData.day_of_week || s.day,
+            day_of_week: updatedData.day || updatedData.day_of_week || s.day,
+            classroom: updatedData.classroom || updatedData.classroom_name || s.classroom,
+            classroom_name: updatedData.classroom || updatedData.classroom_name || s.classroom
+          };
+        }
+        return s;
+      })
+    );
+
     try {
       if (supabaseConnected) {
-        await supabase.from('schedules').update(updatedData).eq('id', id);
+        await supabase.from('schedules').update({
+          day_of_week: updatedData.day || updatedData.day_of_week,
+          start_time: updatedData.time?.split('-')[0]?.trim(),
+          end_time: updatedData.time?.split('-')[1]?.trim(),
+          classroom_name: updatedData.classroom || updatedData.classroom_name,
+          subject_name: updatedData.subject || updatedData.subjectName,
+          teacher_name: updatedData.teacher || updatedData.teacher_name,
+          grade_level: updatedData.gradeLevel || updatedData.grade_level,
+          entry_type: updatedData.entry_type,
+          notes: updatedData.notes
+        }).eq('id', id);
       }
     } catch (e) {}
     notify('Horario actualizado');
@@ -771,6 +965,7 @@ export function AppProvider({ children }) {
     try {
       if (supabaseConnected) {
         await supabase.from('certificates').insert({
+          id: newCert.id,
           student_id: newCert.studentId,
           title: newCert.title,
           description: newCert.description,
@@ -824,6 +1019,7 @@ export function AppProvider({ children }) {
     try {
       if (supabaseConnected) {
         await supabase.from('memories').insert({
+          id: newMem.id,
           title: newMem.title,
           description: newMem.description,
           photo_url: newMem.image,
@@ -851,6 +1047,7 @@ export function AppProvider({ children }) {
     try {
       if (supabaseConnected) {
         await supabase.from('payments').insert({
+          id: newPay.id,
           representative_name: newPay.representativeName,
           student_name: newPay.studentName,
           amount: newPay.amount,
@@ -944,9 +1141,66 @@ export function AppProvider({ children }) {
 
   // CLASSROOMS
   const addClassroom = async (clrData) => {
-    const newClr = { id: `clr-${Date.now()}`, ...clrData };
+    const newClr = {
+      id: `clr-${Date.now()}`,
+      name: clrData.name,
+      building: clrData.building || 'Sede Principal',
+      capacity: Number(clrData.capacity) || 35,
+      status: clrData.status || 'disponible'
+    };
     setClassrooms((prev) => [...prev, newClr]);
+
+    try {
+      if (supabaseConnected) {
+        await supabase.from('classrooms').insert({
+          id: newClr.id,
+          name: newClr.name,
+          building: newClr.building,
+          capacity: newClr.capacity,
+          status: newClr.status
+        });
+      }
+    } catch (e) {}
+
     notify(`Aula "${newClr.name}" agregada`);
+    return newClr;
+  };
+
+  const updateClassroom = async (id, updatedData) => {
+    setClassrooms((prev) =>
+      prev.map((c) =>
+        c.id === id
+          ? {
+              ...c,
+              ...updatedData,
+              capacity: updatedData.capacity !== undefined ? Number(updatedData.capacity) : c.capacity
+            }
+          : c
+      )
+    );
+
+    try {
+      if (supabaseConnected) {
+        await supabase.from('classrooms').update({
+          name: updatedData.name,
+          building: updatedData.building,
+          capacity: updatedData.capacity !== undefined ? Number(updatedData.capacity) : undefined,
+          status: updatedData.status
+        }).eq('id', id);
+      }
+    } catch (e) {}
+
+    notify('Información del aula actualizada');
+  };
+
+  const deleteClassroom = async (id) => {
+    setClassrooms((prev) => prev.filter((c) => c.id !== id));
+    try {
+      if (supabaseConnected) {
+        await supabase.from('classrooms').delete().eq('id', id);
+      }
+    } catch (e) {}
+    notify('Aula eliminada del inventario');
   };
 
   // ANNOUNCEMENTS
@@ -978,6 +1232,7 @@ export function AppProvider({ children }) {
         updateAdminCredentials,
         sections,
         addSection,
+        updateSection,
         deleteSection,
         subjects,
         addSubject,
@@ -985,9 +1240,12 @@ export function AppProvider({ children }) {
         deleteSubject,
         classrooms,
         addClassroom,
+        updateClassroom,
+        deleteClassroom,
         students,
         setStudents,
         enrollStudent,
+        updateStudent,
         deleteStudent,
         promoteSchoolYear,
         emptyStudentsDatabase,

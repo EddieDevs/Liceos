@@ -91,10 +91,10 @@ export default function CertificateModal({ certificate, onClose }) {
               </div>
             </div>
 
-            {/* Medal Insignia with Royal Blue & Gold Thread Accent */}
-            <div className="my-4 flex justify-center">
-              <div className="w-13 h-13 rounded-full bg-[#1E3A8A] text-[#DCB35C] flex items-center justify-center border-2 border-[#DCB35C] shadow-sm">
-                <Award className="w-6 h-6 text-[#DCB35C]" />
+            {/* Official Institutional Seal */}
+            <div className="my-3 flex justify-center">
+              <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center p-1 border-2 border-[#1E3A8A] shadow-xs">
+                <img src="/logo.png" alt="Sello Institucional" className="w-13 h-13 object-contain" />
               </div>
             </div>
 

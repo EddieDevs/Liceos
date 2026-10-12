@@ -78,8 +78,7 @@ export default function Navbar() {
               <Calendar className="w-3 h-3 text-[#DCB35C]" />
               <span>{institution.currentSchoolYear ? `Año Escolar ${institution.currentSchoolYear}` : 'Año Escolar 2027-2028'}</span>
             </span>
-            <span className="text-slate-600">•</span>
-            <span className="text-slate-300 italic font-serif">"{institution.motto}"</span>
+            <span className="text-slate-500 font-mono text-[10px]">Barcelona, Anzoátegui</span>
           </div>
         </div>
       </div>
@@ -92,15 +91,15 @@ export default function Navbar() {
             onClick={() => setActiveTab('home')}
             className="flex items-center gap-3.5 cursor-pointer group select-none"
           >
-            <div className="w-10 h-10 rounded-xl bg-[#223C63] border border-[#DCB35C]/40 flex items-center justify-center text-[#DCB35C] font-bold shadow-md group-hover:scale-105 transition transform duration-200">
-              <School className="w-5 h-5 text-[#DCB35C]" />
+            <div className="w-10 h-10 rounded-lg bg-[#1A2B45] border border-[#DCB35C]/50 flex items-center justify-center p-1 shadow-md group-hover:scale-105 transition transform duration-200">
+              <img src="/logo.png" alt="Crest" className="w-8 h-8 object-contain" />
             </div>
             <div>
               <div className="font-slab font-bold text-base sm:text-lg text-white tracking-tight leading-tight group-hover:text-[#f0c36d] transition">
                 {institution.name}
               </div>
               <p className="text-[11px] text-slate-400 font-medium">
-                Barcelona, Anzoátegui • Lema: {institution.motto}
+                Zona Educativa de Anzoátegui • Código DEA Oficial
               </p>
             </div>
           </div>
@@ -109,7 +108,7 @@ export default function Navbar() {
           <nav className="hidden lg:flex items-center gap-1 text-xs font-medium text-slate-300">
             <button
               onClick={() => setActiveTab('home')}
-              className={`px-3.5 py-2 rounded-xl transition cursor-pointer ${
+              className={`px-3.5 py-2 rounded-lg transition cursor-pointer ${
                 activeTab === 'home'
                   ? 'text-white bg-[#223C63] border border-stitch-subtle font-semibold shadow-xs'
                   : 'hover:text-white hover:bg-[#1A2B45]'
@@ -120,28 +119,28 @@ export default function Navbar() {
             <a
               href="#identidad"
               onClick={() => setActiveTab('home')}
-              className="px-3.5 py-2 rounded-xl hover:text-white hover:bg-[#1A2B45] transition"
+              className="px-3.5 py-2 rounded-lg hover:text-white hover:bg-[#1A2B45] transition"
             >
               Identidad & Valores
             </a>
             <a
               href="#inscripciones"
               onClick={() => setActiveTab('home')}
-              className="px-3.5 py-2 rounded-xl hover:text-white hover:bg-[#1A2B45] transition"
+              className="px-3.5 py-2 rounded-lg hover:text-white hover:bg-[#1A2B45] transition"
             >
               Admisiones
             </a>
             <a
               href="#instalaciones"
               onClick={() => setActiveTab('home')}
-              className="px-3.5 py-2 rounded-xl hover:text-white hover:bg-[#1A2B45] transition"
+              className="px-3.5 py-2 rounded-lg hover:text-white hover:bg-[#1A2B45] transition"
             >
               Instalaciones & Galería
             </a>
             <a
               href="#contacto"
               onClick={() => setActiveTab('home')}
-              className="px-3.5 py-2 rounded-xl hover:text-white hover:bg-[#1A2B45] transition"
+              className="px-3.5 py-2 rounded-lg hover:text-white hover:bg-[#1A2B45] transition"
             >
               Ubicación & Contacto
             </a>
@@ -150,11 +149,11 @@ export default function Navbar() {
           {/* Portals Access / User Profile */}
           <div className="hidden sm:flex items-center gap-3">
             {currentUser ? (
-              <div className="flex items-center gap-3 bg-[#1A2B45] p-1.5 pr-3 rounded-2xl border border-stitch-subtle shadow-md">
+              <div className="flex items-center gap-3 bg-[#1A2B45] p-1.5 pr-3 rounded-lg border border-stitch-subtle shadow-md">
                 <img
                   src={currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'}
                   alt={currentUser.name}
-                  className="w-8 h-8 rounded-xl object-cover border border-[#DCB35C]/40"
+                  className="w-8 h-8 rounded-lg object-cover border border-[#DCB35C]/40"
                 />
                 <div className="text-left text-xs">
                   <div className="font-semibold text-white max-w-[150px] truncate leading-tight">
@@ -165,7 +164,7 @@ export default function Navbar() {
 
                 <button
                   onClick={() => setActiveTab(getPortalTabForUser())}
-                  className="ml-2 px-3 py-1.5 bg-[#DCB35C] hover:bg-[#f0c36d] text-[#1A2B45] rounded-xl text-xs font-bold font-slab flex items-center gap-1.5 shadow-md transition cursor-pointer"
+                  className="ml-2 px-3 py-1.5 bg-[#DCB35C] hover:bg-[#f0c36d] text-[#1A2B45] rounded-lg text-xs font-bold font-slab flex items-center gap-1.5 shadow-md transition cursor-pointer"
                 >
                   <LayoutDashboard className="w-3.5 h-3.5" />
                   <span>Mi Panel</span>
@@ -174,7 +173,7 @@ export default function Navbar() {
                 <button
                   onClick={logout}
                   title="Cerrar Sesión"
-                  className="p-1.5 text-slate-400 hover:text-rose-400 rounded-xl hover:bg-rose-500/10 transition cursor-pointer"
+                  className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-rose-500/10 transition cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
@@ -183,7 +182,7 @@ export default function Navbar() {
               <div className="relative">
                 <button
                   onClick={() => setAccessDropdownOpen(!accessDropdownOpen)}
-                  className="px-4 py-2 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] hover:brightness-105 text-[#1A2B45] font-bold font-slab text-xs rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer"
+                  className="px-4 py-2 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] hover:brightness-105 text-[#1A2B45] font-bold font-slab text-xs rounded-lg shadow-lg transition flex items-center gap-2 cursor-pointer"
                 >
                   <span>Acceso a Portales</span>
                   <ChevronDown className="w-3.5 h-3.5" />
@@ -191,12 +190,12 @@ export default function Navbar() {
 
                 {accessDropdownOpen && (
                   <div
-                    className="absolute right-0 mt-2 w-64 bg-[#152338] text-slate-200 rounded-2xl shadow-2xl border border-stitch p-2 z-50 text-xs font-medium animate-fade-in"
+                    className="absolute right-0 mt-2 w-64 bg-[#152338] text-slate-200 rounded-lg shadow-2xl border border-stitch p-2 z-50 text-xs font-medium animate-fade-in"
                     onClick={() => setAccessDropdownOpen(false)}
                   >
                     <button
                       onClick={() => openAuth('student')}
-                      className="w-full text-left px-3.5 py-2.5 hover:bg-[#1A2B45] rounded-xl flex items-center gap-3 text-slate-200 hover:text-white transition cursor-pointer"
+                      className="w-full text-left px-3.5 py-2.5 hover:bg-[#1A2B45] rounded-lg flex items-center gap-3 text-slate-200 hover:text-white transition cursor-pointer"
                     >
                       <GraduationCap className="w-4 h-4 text-[#DCB35C] shrink-0" />
                       <div>
@@ -206,7 +205,7 @@ export default function Navbar() {
                     </button>
                     <button
                       onClick={() => openAuth('representative')}
-                      className="w-full text-left px-3.5 py-2.5 hover:bg-[#1A2B45] rounded-xl flex items-center gap-3 text-slate-200 hover:text-white transition cursor-pointer"
+                      className="w-full text-left px-3.5 py-2.5 hover:bg-[#1A2B45] rounded-lg flex items-center gap-3 text-slate-200 hover:text-white transition cursor-pointer"
                     >
                       <Users className="w-4 h-4 text-emerald-400 shrink-0" />
                       <div>
@@ -216,7 +215,7 @@ export default function Navbar() {
                     </button>
                     <button
                       onClick={() => openAuth('teacher')}
-                      className="w-full text-left px-3.5 py-2.5 hover:bg-[#1A2B45] rounded-xl flex items-center gap-3 text-slate-200 hover:text-white transition cursor-pointer"
+                      className="w-full text-left px-3.5 py-2.5 hover:bg-[#1A2B45] rounded-lg flex items-center gap-3 text-slate-200 hover:text-white transition cursor-pointer"
                     >
                       <School className="w-4 h-4 text-indigo-400 shrink-0" />
                       <div>
@@ -227,7 +226,7 @@ export default function Navbar() {
                     <div className="my-1.5 border-t border-slate-700/60"></div>
                     <button
                       onClick={() => openAuth('admin')}
-                      className="w-full text-left px-3.5 py-2.5 hover:bg-rose-500/10 rounded-xl flex items-center gap-3 text-slate-100 hover:text-white font-semibold transition cursor-pointer"
+                      className="w-full text-left px-3.5 py-2.5 hover:bg-rose-500/10 rounded-lg flex items-center gap-3 text-slate-100 hover:text-white font-semibold transition cursor-pointer"
                     >
                       <ShieldCheck className="w-4 h-4 text-rose-400 shrink-0" />
                       <div>
