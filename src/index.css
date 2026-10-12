@@ -2,83 +2,140 @@
 
 @layer base {
   :root {
-    --font-sans: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-slab: 'Roboto Slab', Georgia, serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    
+    --color-denim-primary: #223C63;
+    --color-denim-darkwash: #1A2B45;
+    --color-denim-deep: #101c30;
+    --color-thread-gold: #DCB35C;
+    --color-thread-light: #f0c36d;
+    --color-rivet-copper: #B87333;
   }
   
   body {
     font-family: var(--font-sans);
-    background-color: #0b0f19;
+    background-color: #101c30;
     color: #f1f5f9;
   }
 
-  h1, h2, h3, h4, h5, h6, .font-heading {
-    font-family: var(--font-sans);
-    letter-spacing: -0.025em;
+  h1, h2, h3, .font-slab {
+    font-family: var(--font-slab);
+    letter-spacing: -0.015em;
+  }
+
+  .font-heading {
+    font-family: var(--font-slab);
+  }
+
+  .font-mono-code {
+    font-family: var(--font-mono);
   }
 }
 
-/* Glassmorphism Classes (Apple / Google Matte Finish) */
+/* Denim and Industrial Craft Textures & Surfaces */
+.denim-pattern {
+  background-color: #101c30;
+  background-image: 
+    radial-gradient(ellipse at 50% 0%, rgba(34, 60, 99, 0.45) 0%, transparent 70%),
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.012) 0px, rgba(255, 255, 255, 0.012) 1px, transparent 1px, transparent 4px),
+    repeating-linear-gradient(-45deg, rgba(0, 0, 0, 0.2) 0px, rgba(0, 0, 0, 0.2) 1px, transparent 1px, transparent 4px);
+}
+
+.denim-card {
+  background: rgba(26, 43, 69, 0.85);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(220, 179, 92, 0.18);
+  box-shadow: 0 4px 20px -2px rgba(10, 18, 32, 0.6);
+  border-radius: 0.75rem;
+}
+
+.denim-card:hover {
+  border-color: rgba(220, 179, 92, 0.35);
+  box-shadow: 0 8px 30px -4px rgba(34, 60, 99, 0.4);
+}
+
+.denim-card-subtle {
+  background: rgba(19, 32, 53, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+}
+
+/* Gold Stitching Effect */
+.border-stitch {
+  border-style: dashed;
+  border-width: 1.5px;
+  border-color: rgba(220, 179, 92, 0.45);
+}
+
+.border-stitch-subtle {
+  border-style: dashed;
+  border-width: 1px;
+  border-color: rgba(220, 179, 92, 0.25);
+}
+
+/* Textile Patch Badge */
+.denim-patch {
+  background: #1A2B45;
+  border: 1px dashed rgba(220, 179, 92, 0.5);
+  color: #f0c36d;
+  font-family: var(--font-slab);
+  border-radius: 0.5rem;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Glassmorphism Legacy Fallbacks */
 .glass-surface {
-  background: rgba(15, 23, 42, 0.72);
+  background: rgba(26, 43, 69, 0.82);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(220, 179, 92, 0.15);
 }
 
 .glass-surface-subtle {
-  background: rgba(30, 41, 59, 0.45);
+  background: rgba(22, 38, 62, 0.6);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.glass-surface-light {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .glass-card {
-  background: rgba(17, 24, 39, 0.6);
+  background: rgba(26, 43, 69, 0.75);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(220, 179, 92, 0.16);
+  box-shadow: 0 4px 20px -2px rgba(10, 18, 32, 0.5);
 }
 
 .glass-card:hover {
-  border-color: rgba(59, 130, 246, 0.28);
-  box-shadow: 0 10px 30px -4px rgba(29, 78, 216, 0.15);
+  border-color: rgba(220, 179, 92, 0.35);
+  box-shadow: 0 10px 30px -4px rgba(34, 60, 99, 0.3);
 }
 
-/* Custom Matte Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: rgba(11, 15, 25, 0.9);
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(71, 85, 105, 0.5);
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.8);
-}
-
-/* Fluid Transitions */
+/* Fluid Ease-Out Animations */
 .animate-fade-in {
-  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-scale-in {
-  animation: scaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -87,7 +144,23 @@
   to { opacity: 1; transform: scale(1); }
 }
 
-/* Print Rules for Official Documents */
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #101c30;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(220, 179, 92, 0.3);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(220, 179, 92, 0.6);
+}
+
+/* Print Rules for Official Venezuelan Documents */
 @media print {
   body {
     background: white !important;
@@ -99,9 +172,10 @@
   .print-only {
     display: block !important;
   }
-  .glass-surface, .glass-card, .glass-surface-subtle {
+  .denim-card, .denim-card-subtle, .glass-surface, .glass-card {
     background: white !important;
     border: 1px solid #cbd5e1 !important;
     box-shadow: none !important;
+    color: black !important;
   }
 }

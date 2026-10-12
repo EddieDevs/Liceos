@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import {
   initialInstitution,
   initialAdmin,
+  initialSections,
   initialSubjects,
   initialStudents,
   initialTeachersList,
@@ -37,8 +38,23 @@ export function AppProvider({ children }) {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [targetAuthRole, setTargetAuthRole] = useState('student');
 
-  const [institution, setInstitution] = useState(initialInstitution);
-  const [adminUser] = useState(initialAdmin);
+  // Institution settings (includes currentSchoolYear)
+  const [institution, setInstitution] = useState(() => {
+    const saved = localStorage.getItem('iv_institution');
+    return saved ? JSON.parse(saved) : initialInstitution;
+  });
+
+  // Admin Account (email & password saved in DB / localStorage)
+  const [adminUser, setAdminUser] = useState(() => {
+    const saved = localStorage.getItem('iv_admin_account');
+    return saved ? JSON.parse(saved) : initialAdmin;
+  });
+
+  // Sections (1er a 5to año, Secciones A a C)
+  const [sections, setSections] = useState(() => {
+    const saved = localStorage.getItem('iv_sections');
+    return saved ? JSON.parse(saved) : initialSections;
+  });
 
   // Dynamic Data States
   const [subjects, setSubjects] = useState(() => {
@@ -108,10 +124,22 @@ export function AppProvider({ children }) {
     setToastMessage({ msg, type, id: Date.now() });
     setTimeout(() => {
       setToastMessage(null);
-    }, 4000);
+    }, 4500);
   };
 
   // Sync to localStorage
+  useEffect(() => {
+    localStorage.setItem('iv_institution', JSON.stringify(institution));
+  }, [institution]);
+
+  useEffect(() => {
+    localStorage.setItem('iv_admin_account', JSON.stringify(adminUser));
+  }, [adminUser]);
+
+  useEffect(() => {
+    localStorage.setItem('iv_sections', JSON.stringify(sections));
+  }, [sections]);
+
   useEffect(() => {
     localStorage.setItem('iv_subjects', JSON.stringify(subjects));
   }, [subjects]);
@@ -172,8 +200,31 @@ export function AppProvider({ children }) {
   useEffect(() => {
     async function loadFromSupabase() {
       try {
-        const { data: info } = await supabase.from('institution_info').select('*').limit(1);
-        if (info && info.length > 0) setSupabaseConnected(true);
+        const { data: info } = await supabase.from('school_settings').select('*').limit(1);
+        if (info && info.length > 0) {
+          setSupabaseConnected(true);
+          if (info[0].current_school_year) {
+            setInstitution(prev => ({
+              ...prev,
+              currentSchoolYear: info[0].current_school_year,
+              admissions: {
+                ...prev.admissions,
+                period: `Año Escolar ${info[0].current_school_year}`
+              }
+            }));
+          }
+          if (info[0].admin_email) {
+            setAdminUser(prev => ({
+              ...prev,
+              email: info[0].admin_email,
+              password: info[0].admin_password || prev.password
+            }));
+          }
+        }
+
+        // Fetch sections
+        const { data: secData } = await supabase.from('sections').select('*');
+        if (secData && secData.length > 0) setSections(secData);
 
         // Fetch subjects
         const { data: subData } = await supabase.from('subjects').select('*');
@@ -182,6 +233,14 @@ export function AppProvider({ children }) {
         // Fetch classrooms
         const { data: clrData } = await supabase.from('classrooms').select('*');
         if (clrData && clrData.length > 0) setClassrooms(clrData);
+
+        // Fetch teachers
+        const { data: tchData } = await supabase.from('teachers').select('*');
+        if (tchData && tchData.length > 0) setTeachersList(tchData);
+
+        // Fetch students
+        const { data: stuData } = await supabase.from('students').select('*');
+        if (stuData && stuData.length > 0) setStudents(stuData);
 
         // Fetch schedules
         const { data: schData } = await supabase.from('schedules').select('*');
@@ -208,7 +267,8 @@ export function AppProvider({ children }) {
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         const user = session.user;
-        const isAdmin = user.email?.toLowerCase() === 'quinterostudent@gmail.com';
+        const currentAdminEmail = adminUser.email?.toLowerCase();
+        const isAdmin = user.email?.toLowerCase() === currentAdminEmail;
 
         try {
           const { data: profile } = await supabase
@@ -217,14 +277,16 @@ export function AppProvider({ children }) {
             .eq('id', user.id)
             .single();
 
-          const resolvedRole = isAdmin ? 'admin' : (profile?.role || user.user_metadata?.role || 'student');
+          const resolvedRole = isAdmin ? 'admin' : (profile?.role || user.user_metadata?.role || 'representative');
 
           const userObj = {
             id: user.id,
             email: user.email,
-            name: isAdmin ? 'Larry González' : (profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0]),
+            name: isAdmin ? adminUser.name : (profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0]),
+            cedula: profile?.cedula || '',
             role: resolvedRole,
-            gradeLevel: profile?.grade_level || user.user_metadata?.grade_level || '4to Año',
+            gradeLevel: profile?.grade_level || user.user_metadata?.grade_level || '1er Año',
+            section: profile?.section || 'Sección A',
             avatar: profile?.avatar_url || user.user_metadata?.avatar_url || '',
             isSupabaseUser: true,
           };
@@ -235,11 +297,11 @@ export function AppProvider({ children }) {
           else if (resolvedRole === 'representative') setActiveTab('representative-portal');
           else setActiveTab('student-portal');
         } catch (e) {
-          const resolvedRole = isAdmin ? 'admin' : 'student';
+          const resolvedRole = isAdmin ? 'admin' : 'representative';
           const userObj = {
             id: user.id,
             email: user.email,
-            name: isAdmin ? 'Larry González' : user.email?.split('@')[0],
+            name: isAdmin ? adminUser.name : user.email?.split('@')[0],
             role: resolvedRole,
             isSupabaseUser: true,
           };
@@ -252,7 +314,7 @@ export function AppProvider({ children }) {
     return () => {
       authListener?.subscription?.unsubscribe();
     };
-  }, []);
+  }, [adminUser.email]);
 
   // Admin Login Handler
   const loginAsAdmin = () => {
@@ -268,7 +330,7 @@ export function AppProvider({ children }) {
     setCurrentUser(userObj);
     setActiveTab('admin-portal');
     setAuthModalOpen(false);
-    notify(`Acceso administrativo concedido: ${adminUser.name}`);
+    notify(`Acceso concedido a Dirección General (${adminUser.name})`);
   };
 
   const logout = async () => {
@@ -280,34 +342,318 @@ export function AppProvider({ children }) {
     notify('Has cerrado sesión');
   };
 
-  // Profile Update (including Direct Avatar File Upload)
-  const updateUserProfile = async (updates) => {
-    const updated = { ...currentUser, ...updates };
-    setCurrentUser(updated);
+  // REQUISITO 8: Actualizar credenciales del Administrador en la Base de Datos
+  const updateAdminCredentials = async ({ email, password, name, phone }) => {
+    const updated = {
+      ...adminUser,
+      email: email ? email.trim() : adminUser.email,
+      password: password ? password : adminUser.password,
+      name: name || adminUser.name,
+      phone: phone || adminUser.phone,
+    };
+    setAdminUser(updated);
+    setInstitution(prev => ({
+      ...prev,
+      adminEmail: updated.email,
+      principal: updated.name
+    }));
 
-    // If student, update in students list too
-    if (updated.role === 'student') {
-      setStudents((prev) => {
-        const exists = prev.some((s) => s.id === updated.id);
-        if (exists) return prev.map((s) => (s.id === updated.id ? { ...s, ...updates } : s));
-        return [...prev, updated];
-      });
+    if (currentUser?.role === 'admin') {
+      setCurrentUser(prev => ({ ...prev, email: updated.email, name: updated.name }));
     }
 
     try {
+      if (supabaseConnected) {
+        await supabase.from('school_settings').upsert({
+          id: 'settings-main',
+          admin_email: updated.email,
+          admin_password: updated.password,
+          updated_at: new Date().toISOString()
+        });
+      }
+    } catch (e) {}
+
+    notify('Credenciales de Dirección actualizadas y guardadas en la base de datos');
+  };
+
+  // REQUISITO 1: Actualizar Perfil de Estudiante (Cédula, Año, Sección, etc.)
+  const updateStudentProfile = async (updates) => {
+    const updated = { ...currentUser, ...updates };
+    setCurrentUser(updated);
+
+    // Sync in students list
+    setStudents((prev) => {
+      const exists = prev.some((s) => s.id === updated.id || s.email === updated.email);
+      if (exists) {
+        return prev.map((s) => (s.id === updated.id || s.email === updated.email ? { ...s, ...updates } : s));
+      }
+      return [...prev, updated];
+    });
+
+    try {
       if (supabaseConnected && updated.id) {
+        await supabase.from('students').update({
+          full_name: updated.name,
+          cedula: updated.cedula,
+          grade_year: updated.gradeLevel || updated.grade_year,
+          section: updated.section,
+          phone: updated.phone,
+          avatar_url: updated.avatar
+        }).eq('id', updated.id);
+
         await supabase.from('profiles').update({
           full_name: updated.name,
-          avatar_url: updated.avatar,
-          phone: updated.phone,
+          cedula: updated.cedula,
           grade_level: updated.gradeLevel,
+          section: updated.section,
+          phone: updated.phone,
+          avatar_url: updated.avatar
         }).eq('id', updated.id);
       }
-    } catch (e) {
-      // offline fallback
+    } catch (e) {}
+
+    notify('Datos del estudiante actualizados correctamente');
+  };
+
+  // REQUISITO 5: Matricular Estudiante (Solo el Administrador)
+  const enrollStudent = async (studentData) => {
+    const newStudent = {
+      id: `stu-${Date.now()}`,
+      name: `${studentData.firstName} ${studentData.lastName}`.trim(),
+      firstName: studentData.firstName,
+      lastName: studentData.lastName,
+      cedula: studentData.cedula,
+      gradeLevel: studentData.gradeYear || '1er Año',
+      grade_year: studentData.gradeYear || '1er Año',
+      section: studentData.sectionLetter || 'Sección A',
+      email: studentData.email.trim().toLowerCase(),
+      password: studentData.password,
+      representativeName: studentData.representativeName || 'Por asignar',
+      representativePhone: studentData.phone || '',
+      phone: studentData.phone || '',
+      role: 'student',
+      status: 'Activo',
+      enrolledAt: new Date().toLocaleDateString('es-ES'),
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'
+    };
+
+    setStudents((prev) => [newStudent, ...prev]);
+
+    try {
+      if (supabaseConnected) {
+        await supabase.from('students').insert({
+          id: newStudent.id,
+          first_name: newStudent.firstName,
+          last_name: newStudent.lastName,
+          full_name: newStudent.name,
+          cedula: newStudent.cedula,
+          grade_year: newStudent.grade_year,
+          section: newStudent.section,
+          email: newStudent.email,
+          password_plain: newStudent.password,
+          representative_name: newStudent.representativeName,
+          phone: newStudent.phone,
+          status: 'Activo'
+        });
+      }
+    } catch (e) {}
+
+    notify(`Estudiante matriculado: ${newStudent.name} (${newStudent.grade_year} ${newStudent.section})`);
+    return newStudent;
+  };
+
+  const deleteStudent = async (id) => {
+    setStudents((prev) => prev.filter((s) => s.id !== id));
+    try {
+      if (supabaseConnected) {
+        await supabase.from('students').delete().eq('id', id);
+      }
+    } catch (e) {}
+    notify('Estudiante retirado de la matrícula');
+  };
+
+  // REQUISITO 6: Gestión de Profesores (Agregar, Editar, Eliminar)
+  const addTeacher = async (teacherData) => {
+    const newTeacher = {
+      id: `tch-${Date.now()}`,
+      name: teacherData.name,
+      cedula: teacherData.cedula || 'V-00.000.000',
+      email: teacherData.email.trim().toLowerCase(),
+      specialty: teacherData.specialty || 'Educación Media General',
+      phone: teacherData.phone || '',
+      password: teacherData.password || 'docente123',
+      role: 'teacher',
+      status: 'Activo',
+      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80'
+    };
+
+    setTeachersList((prev) => [newTeacher, ...prev]);
+
+    try {
+      if (supabaseConnected) {
+        await supabase.from('teachers').insert({
+          id: newTeacher.id,
+          full_name: newTeacher.name,
+          cedula: newTeacher.cedula,
+          email: newTeacher.email,
+          specialty: newTeacher.specialty,
+          phone: newTeacher.phone,
+          password_plain: newTeacher.password
+        });
+      }
+    } catch (e) {}
+
+    notify(`Profesor "${newTeacher.name}" registrado en la nómina docente`);
+    return newTeacher;
+  };
+
+  const updateTeacher = async (id, updatedData) => {
+    setTeachersList((prev) => prev.map((t) => (t.id === id ? { ...t, ...updatedData } : t)));
+    try {
+      if (supabaseConnected) {
+        await supabase.from('teachers').update(updatedData).eq('id', id);
+      }
+    } catch (e) {}
+    notify('Datos del docente actualizados');
+  };
+
+  const deleteTeacher = async (id) => {
+    setTeachersList((prev) => prev.filter((t) => t.id !== id));
+    try {
+      if (supabaseConnected) {
+        await supabase.from('teachers').delete().eq('id', id);
+      }
+    } catch (e) {}
+    notify('Docente eliminado del registro');
+  };
+
+  // REQUISITO 4: Gestión de Secciones (1er Año a 5to Año, Secciones A a C)
+  const addSection = async (secData) => {
+    const newSec = {
+      id: `sec-${Date.now()}`,
+      year: secData.year, // '1er Año', '2do Año', '3er Año', '4to Año', '5to Año'
+      section: secData.section, // 'A', 'B', 'C'
+      name: `${secData.year} - Sección ${secData.section}`,
+      capacity: Number(secData.capacity) || 35,
+      classroom: secData.classroom || 'Aula por asignar',
+      guideTeacher: secData.guideTeacher || 'Por asignar'
+    };
+
+    // Check if section already exists
+    const exists = sections.some(s => s.year === newSec.year && s.section === newSec.section);
+    if (exists) {
+      notify(`La sección ${newSec.name} ya existe en el sistema`, 'error');
+      return null;
     }
 
-    notify('Perfil actualizado exitosamente');
+    setSections((prev) => [...prev, newSec]);
+
+    try {
+      if (supabaseConnected) {
+        await supabase.from('sections').insert({
+          id: newSec.id,
+          grade_year: newSec.year,
+          section_letter: newSec.section,
+          name: newSec.name,
+          capacity: newSec.capacity,
+          classroom: newSec.classroom,
+          guide_teacher: newSec.guideTeacher
+        });
+      }
+    } catch (e) {}
+
+    notify(`Sección ${newSec.name} agregada con éxito`);
+    return newSec;
+  };
+
+  const deleteSection = async (id) => {
+    setSections((prev) => prev.filter((s) => s.id !== id));
+    try {
+      if (supabaseConnected) {
+        await supabase.from('sections').delete().eq('id', id);
+      }
+    } catch (e) {}
+    notify('Sección escolar eliminada');
+  };
+
+  // REQUISITO 9: Promover al siguiente Año Escolar (Prosecución de Estudios)
+  const promoteSchoolYear = async () => {
+    const currentYearStr = institution.currentSchoolYear || '2027-2028';
+    const parts = currentYearStr.split('-');
+    let nextYearStr = '2028-2029';
+    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+      const y1 = parseInt(parts[0], 10) + 1;
+      const y2 = parseInt(parts[1], 10) + 1;
+      nextYearStr = `${y1}-${y2}`;
+    }
+
+    // Advance students grade
+    const promotedStudents = students.map((s) => {
+      let nextGrade = s.grade_year || s.gradeLevel;
+      let status = s.status || 'Activo';
+
+      if (nextGrade === '1er Año') nextGrade = '2do Año';
+      else if (nextGrade === '2do Año') nextGrade = '3er Año';
+      else if (nextGrade === '3er Año') nextGrade = '4to Año';
+      else if (nextGrade === '4to Año') nextGrade = '5to Año';
+      else if (nextGrade === '5to Año') {
+        nextGrade = 'Egresado';
+        status = 'Egresado (Bachiller)';
+      }
+
+      return {
+        ...s,
+        grade_year: nextGrade,
+        gradeLevel: nextGrade,
+        status: status
+      };
+    });
+
+    setStudents(promotedStudents);
+
+    // Update Institution Period
+    const updatedInst = {
+      ...institution,
+      currentSchoolYear: nextYearStr,
+      admissions: {
+        ...institution.admissions,
+        period: `Año Escolar ${nextYearStr}`
+      }
+    };
+    setInstitution(updatedInst);
+
+    try {
+      if (supabaseConnected) {
+        await supabase.from('school_settings').upsert({
+          id: 'settings-main',
+          current_school_year: nextYearStr,
+          updated_at: new Date().toISOString()
+        });
+      }
+    } catch (e) {}
+
+    notify(`¡Año Escolar actualizado con éxito a ${nextYearStr}! Se han promovido todos los estudiantes.`);
+  };
+
+  // REQUISITO 9: Vaciar la Base de Datos de Estudiantes y Registros
+  const emptyStudentsDatabase = async () => {
+    setStudents([]);
+    setGrades([]);
+    setAttendances([]);
+    setCertificates([]);
+    setPayments([]);
+
+    try {
+      if (supabaseConnected) {
+        await supabase.from('students').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        await supabase.from('grades').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        await supabase.from('attendances').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        await supabase.from('certificates').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        await supabase.from('payments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      }
+    } catch (e) {}
+
+    notify('Nómina de estudiantes y registros vaciados con éxito. Base de datos reiniciada.');
   };
 
   // SUBJECTS MANAGEMENT (Admin only)
@@ -330,11 +676,9 @@ export function AppProvider({ children }) {
           color: newSub.color,
         });
       }
-    } catch (e) {
-      // offline fallback
-    }
+    } catch (e) {}
 
-    notify(`Asignatura "${newSub.name}" agregada a la base de datos`);
+    notify(`Asignatura "${newSub.name}" agregada al plan de estudios`);
     return newSub;
   };
 
@@ -358,11 +702,11 @@ export function AppProvider({ children }) {
     notify('Asignatura eliminada');
   };
 
-  // SCHEDULES MANAGEMENT (Regular classes, Recess, Day Off, Free Module)
+  // SCHEDULES MANAGEMENT (Regular, Recess, Free Module, Day Off)
   const addScheduleBlock = async (schedData) => {
     const newBlock = {
       id: `sch-${Date.now()}`,
-      entry_type: schedData.entry_type || 'regular', // 'regular', 'recess', 'free_module', 'day_off'
+      entry_type: schedData.entry_type || 'regular',
       ...schedData
     };
     setSchedules((prev) => [...prev, newBlock]);
@@ -373,9 +717,10 @@ export function AppProvider({ children }) {
           day_of_week: newBlock.day,
           start_time: newBlock.time?.split('-')[0]?.trim() || '07:00:00',
           end_time: newBlock.time?.split('-')[1]?.trim() || '08:30:00',
-          classroom: newBlock.classroom,
-          subject_id: newBlock.subjectId,
+          classroom_name: newBlock.classroom,
+          subject_name: newBlock.subjectName,
           teacher_name: newBlock.teacher,
+          grade_level: newBlock.gradeLevel,
           entry_type: newBlock.entry_type,
           notes: newBlock.notes
         });
@@ -384,7 +729,7 @@ export function AppProvider({ children }) {
 
     let msg = 'Bloque de horario añadido';
     if (newBlock.entry_type === 'day_off') msg = `Día libre (${newBlock.day}) programado`;
-    if (newBlock.entry_type === 'recess') msg = 'Receso escolar agregado al horario';
+    if (newBlock.entry_type === 'recess') msg = 'Receso escolar programado';
     if (newBlock.entry_type === 'free_module') msg = 'Módulo libre registrado';
     notify(msg);
     return newBlock;
@@ -410,15 +755,15 @@ export function AppProvider({ children }) {
     notify('Bloque retirado del horario');
   };
 
-  // CERTIFICATES MANAGEMENT (Admin only: Creation, Templates, Type, and Editing)
+  // CERTIFICATES MANAGEMENT
   const addCertificate = async (certData) => {
     const newCert = {
       id: `cert-${Date.now()}`,
-      certificate_code: `CERT-IV-${Math.random().toString(36).substring(2, 7).toUpperCase()}-${new Date().getFullYear()}`,
+      certificate_code: `CIV-${Math.random().toString(36).substring(2, 7).toUpperCase()}-${institution.currentSchoolYear || '2027-2028'}`,
       issue_date: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }),
       category: certData.category || 'recognition', // 'grade' or 'recognition'
       template_type: certData.template_type || 'academic', // 'academic', 'sports', 'anniversary', 'values'
-      issued_by: 'Larry González, Director General',
+      issued_by: `${institution.principal}, Director General`,
       ...certData
     };
     setCertificates((prev) => [newCert, ...prev]);
@@ -428,9 +773,8 @@ export function AppProvider({ children }) {
         await supabase.from('certificates').insert({
           student_id: newCert.studentId,
           title: newCert.title,
-          type: newCert.type || 'honor',
           description: newCert.description,
-          certificate_code: newCert.certificate_code,
+          verification_code: newCert.certificate_code,
           category: newCert.category,
           template_type: newCert.template_type,
           student_name: newCert.studentName,
@@ -466,7 +810,7 @@ export function AppProvider({ children }) {
     notify('Certificado eliminado');
   };
 
-  // MEMORIES (Students and Faculty upload directly with image files)
+  // MEMORIES
   const addMemory = async (memData) => {
     const newMem = {
       id: `mem-${Date.now()}`,
@@ -482,10 +826,9 @@ export function AppProvider({ children }) {
         await supabase.from('memories').insert({
           title: newMem.title,
           description: newMem.description,
-          image_url: newMem.image,
-          category: newMem.category,
-          author_name: newMem.author_name,
-          grade_year: newMem.grade_year
+          photo_url: newMem.image,
+          student_name: newMem.author_name,
+          year_title: newMem.grade_year
         });
       }
     } catch (e) {}
@@ -494,7 +837,7 @@ export function AppProvider({ children }) {
     return newMem;
   };
 
-  // PAYMENTS (Representatives submit receipts via file upload; Admin verifies)
+  // PAYMENTS
   const addPayment = async (payData) => {
     const newPay = {
       id: `pay-${Date.now()}`,
@@ -508,18 +851,13 @@ export function AppProvider({ children }) {
     try {
       if (supabaseConnected) {
         await supabase.from('payments').insert({
-          representative_id: newPay.representativeId,
           representative_name: newPay.representativeName,
-          student_id: newPay.studentId,
           student_name: newPay.studentName,
-          student_grade: newPay.studentGrade,
           amount: newPay.amount,
-          currency: newPay.currency || 'USD',
           payment_method: newPay.paymentMethod,
           reference_number: newPay.referenceNumber,
-          payment_concept: newPay.paymentConcept,
+          concept: newPay.paymentConcept,
           receipt_url: newPay.receiptUrl,
-          payment_date: newPay.paymentDate,
           status: 'pending'
         });
       }
@@ -541,8 +879,7 @@ export function AppProvider({ children }) {
     try {
       if (supabaseConnected) {
         await supabase.from('payments').update({
-          status: newStatus,
-          admin_notes: notes
+          status: newStatus
         }).eq('id', id);
       }
     } catch (e) {}
@@ -550,7 +887,7 @@ export function AppProvider({ children }) {
     notify(newStatus === 'approved' ? 'Pago aprobado exitosamente' : 'Estado de pago actualizado');
   };
 
-  // GRADES (Teachers and Admin)
+  // GRADES
   const addOrUpdateGrade = async (gradeData) => {
     const isUpdate = !!gradeData.id;
     let newGrade;
@@ -565,20 +902,6 @@ export function AppProvider({ children }) {
       };
       setGrades((prev) => [newGrade, ...prev]);
     }
-
-    try {
-      if (supabaseConnected) {
-        await supabase.from('grades').upsert({
-          student_id: newGrade.studentId,
-          evaluation_title: newGrade.evaluationTitle,
-          score: newGrade.score,
-          max_score: newGrade.maxScore || 20,
-          percentage: newGrade.percentage || 20,
-          term: newGrade.term || '1er Lapso',
-          comments: newGrade.comments
-        });
-      }
-    } catch (e) {}
 
     notify(isUpdate ? 'Calificación actualizada' : 'Calificación registrada en el sistema');
     return newGrade;
@@ -615,32 +938,15 @@ export function AppProvider({ children }) {
       ...attData
     };
     setAttendances((prev) => [newAtt, ...prev]);
-    notify('Inasistencia registrada y notificada');
+    notify('Inasistencia registrada en el expediente');
     return newAtt;
   };
 
-  // CLASSROOMS (Admin)
+  // CLASSROOMS
   const addClassroom = async (clrData) => {
     const newClr = { id: `clr-${Date.now()}`, ...clrData };
     setClassrooms((prev) => [...prev, newClr]);
     notify(`Aula "${newClr.name}" agregada`);
-  };
-
-  // TEACHERS (Admin)
-  const addTeacher = (teacherData) => {
-    const newT = { id: `usr-teacher-${Date.now()}`, ...teacherData };
-    setTeachersList((prev) => [...prev, newT]);
-    notify(`Docente "${newT.name}" registrado`);
-  };
-
-  const updateTeacher = (id, updatedData) => {
-    setTeachersList((prev) => prev.map((t) => (t.id === id ? { ...t, ...updatedData } : t)));
-    notify('Docente actualizado');
-  };
-
-  const deleteTeacher = (id) => {
-    setTeachersList((prev) => prev.filter((t) => t.id !== id));
-    notify('Docente retirado');
   };
 
   // ANNOUNCEMENTS
@@ -659,7 +965,7 @@ export function AppProvider({ children }) {
       value={{
         currentUser,
         setCurrentUser,
-        updateUserProfile,
+        updateStudentProfile,
         activeTab,
         setActiveTab,
         authModalOpen,
@@ -669,6 +975,10 @@ export function AppProvider({ children }) {
         institution,
         setInstitution,
         adminUser,
+        updateAdminCredentials,
+        sections,
+        addSection,
+        deleteSection,
         subjects,
         addSubject,
         updateSubject,
@@ -677,6 +987,10 @@ export function AppProvider({ children }) {
         addClassroom,
         students,
         setStudents,
+        enrollStudent,
+        deleteStudent,
+        promoteSchoolYear,
+        emptyStudentsDatabase,
         teachersList,
         addTeacher,
         updateTeacher,

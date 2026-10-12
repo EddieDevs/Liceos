@@ -16,7 +16,10 @@ import {
   Mail,
   MapPin,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  IdCard,
+  Sparkles,
+  Save
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import CertificateModal from './CertificateModal';
@@ -26,7 +29,7 @@ import { readFileAsDataURL } from '../lib/fileUpload';
 export default function StudentPortal() {
   const {
     currentUser,
-    updateUserProfile,
+    updateStudentProfile,
     grades,
     evaluationPlans,
     schedules,
@@ -36,27 +39,44 @@ export default function StudentPortal() {
     addMemory,
     institution,
     subjects,
-    setActiveTab,
+    sections,
     notify
   } = useApp();
 
-  const [activeSubTab, setActiveSubTab] = useState('grades'); // 'grades', 'schedule', 'plans', 'certificates', 'attendance', 'memories', 'profile'
+  const [activeSubTab, setActiveSubTab] = useState('grades'); // 'grades', 'schedule', 'plans', 'certificates', 'attendance', 'memories', 'carnet', 'profile'
   const [selectedTerm, setSelectedTerm] = useState('1er Lapso');
   const [selectedCertificate, setSelectedCertificate] = useState(null);
   const [reportCardModalOpen, setReportCardModalOpen] = useState(false);
 
+  // Profile edit form state (Requisito 1)
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    name: currentUser?.name || '',
+    cedula: currentUser?.cedula || '',
+    gradeLevel: currentUser?.gradeLevel || currentUser?.grade_year || '1er Año',
+    section: currentUser?.section || 'Sección A',
+    phone: currentUser?.phone || ''
+  });
+
   // Profile photo upload input ref
   const profilePhotoInputRef = useRef(null);
 
-  // Current student object (or null defaults)
-  const student = currentUser || {
-    id: 'student-temp',
-    name: 'Estudiante',
-    email: 'estudiante@integralvenezuela.edu.ve',
-    studentIdNumber: 'Sin asignar',
-    gradeLevel: 'Sin asignar',
-    avatar: '',
+  // Student object
+  const student = {
+    id: currentUser?.id || 'stu-temp',
+    name: currentUser?.name || 'Estudiante Regular',
+    email: currentUser?.email || 'estudiante@integralvenezuela.edu.ve',
+    cedula: currentUser?.cedula || '',
+    gradeLevel: currentUser?.gradeLevel || currentUser?.grade_year || '1er Año',
+    section: currentUser?.section || 'Sección A',
+    avatar: currentUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+    phone: currentUser?.phone || ''
   };
+
+  const activeYear = institution.currentSchoolYear || '2027-2028';
+
+  // Check if profile is incomplete (missing cedula or section)
+  const isProfileIncomplete = !student.cedula || !student.section;
 
   // Memory modal state
   const [memoryModalOpen, setMemoryModalOpen] = useState(false);
@@ -67,6 +87,67 @@ export default function StudentPortal() {
     description: ''
   });
   const memoryFileInputRef = useRef(null);
+
+  // Handle direct avatar photo change (Requisito 7)
+  const handleAvatarFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        const dataUrl = await readFileAsDataURL(file);
+        updateStudentProfile({ avatar: dataUrl });
+      } catch (err) {
+        notify('Error al cargar la imagen', 'error');
+      }
+    }
+  };
+
+  // Handle saving personal details (Requisito 1)
+  const handleSaveProfile = (e) => {
+    e.preventDefault();
+    updateStudentProfile({
+      name: profileForm.name,
+      cedula: profileForm.cedula,
+      gradeLevel: profileForm.gradeLevel,
+      grade_year: profileForm.gradeLevel,
+      section: profileForm.section,
+      phone: profileForm.phone
+    });
+    setEditingProfile(false);
+  };
+
+  // Memory file change
+  const handleMemoryFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        const dataUrl = await readFileAsDataURL(file);
+        setMemoryImagePreview(dataUrl);
+      } catch (err) {
+        notify('Error al cargar la foto del recuerdo', 'error');
+      }
+    }
+  };
+
+  const handleSaveMemory = (e) => {
+    e.preventDefault();
+    if (!memoryImagePreview) {
+      notify('Por favor selecciona una foto para el recuerdo', 'error');
+      return;
+    }
+
+    addMemory({
+      title: memoryForm.title,
+      category: memoryForm.category,
+      description: memoryForm.description,
+      image: memoryImagePreview,
+      authorName: student.name,
+      gradeYear: `${student.gradeLevel} - ${student.section}`
+    });
+
+    setMemoryModalOpen(false);
+    setMemoryForm({ title: '', category: 'Proyectos', description: '' });
+    setMemoryImagePreview('');
+  };
 
   // Student specific grades
   const studentGrades = grades.filter(
@@ -98,503 +179,388 @@ export default function StudentPortal() {
 
   // Certificates for this student
   const studentCerts = certificates.filter(
-    (c) => c.studentId === student.id || c.studentName === student.name
+    (c) => c.studentId === student.id || c.studentName?.toLowerCase() === student.name.toLowerCase()
   );
-
-  // Attendances for this student
-  const studentAtts = attendances.filter(
-    (a) => a.studentId === student.id || a.studentName === student.name
-  );
-
-  // Handle student profile photo upload directly
-  const handleProfilePhotoChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const dataUrl = await readFileAsDataURL(file);
-      await updateUserProfile({ avatar: dataUrl });
-      notify('Foto de perfil actualizada correctamente');
-    } catch (err) {
-      notify('No se pudo procesar la imagen seleccionada', 'error');
-    }
-  };
-
-  // Handle memory photo upload directly
-  const handleMemoryFileChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const dataUrl = await readFileAsDataURL(file);
-      setMemoryImagePreview(dataUrl);
-    } catch (err) {
-      notify('Error al cargar la foto', 'error');
-    }
-  };
-
-  const handleSaveMemory = async (e) => {
-    e.preventDefault();
-    if (!memoryImagePreview) {
-      notify('Por favor selecciona una foto para tu recuerdo', 'error');
-      return;
-    }
-
-    await addMemory({
-      title: memoryForm.title,
-      category: memoryForm.category,
-      description: memoryForm.description,
-      image: memoryImagePreview,
-      authorName: student.name,
-      gradeYear: student.gradeLevel || 'Bachillerato'
-    });
-
-    setMemoryModalOpen(false);
-    setMemoryImagePreview('');
-    setMemoryForm({ title: '', category: 'Proyectos', description: '' });
-  };
-
-  const daysOfWeek = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 pb-20">
-      {/* 1. Header Banner (Apple / Google Matte Glass Design) */}
-      <div className="bg-slate-900/80 border-b border-slate-800/80 pt-8 pb-14 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          {/* Breadcrumbs */}
-          <div className="flex items-center gap-2 text-xs text-slate-400 mb-4">
-            <button onClick={() => setActiveTab('home')} className="hover:text-white transition">
-              Inicio
+    <div className="min-h-screen denim-pattern text-slate-100 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Banner de Datos Incompletos (Requisito 1) */}
+        {isProfileIncomplete && (
+          <div className="p-4 rounded-2xl bg-amber-950/60 border border-[#DCB35C] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-fade-in shadow-xl">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#223C63] border border-[#DCB35C]/60 flex items-center justify-center text-[#DCB35C] shrink-0">
+                <AlertCircle className="w-5 h-5 text-[#f0c36d]" />
+              </div>
+              <div className="text-xs">
+                <div className="font-bold font-slab text-[#f0c36d] text-sm">
+                  Expediente Escolar Incompleto
+                </div>
+                <div className="text-slate-300">
+                  Agrega tu <strong>Cédula de Identidad</strong> y confirma tu <strong>Año y Sección</strong> para emitir tu carnet estudiantil y boletines del Año {activeYear}.
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setActiveSubTab('profile');
+                setEditingProfile(true);
+              }}
+              className="px-4 py-2 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] hover:brightness-105 text-[#1A2B45] font-bold font-slab text-xs rounded-xl shadow-md transition shrink-0 cursor-pointer"
+            >
+              Completar Mis Datos
             </button>
-            <ChevronRight className="w-3.5 h-3.5" />
-            <span className="text-white font-medium">Portal del Estudiante</span>
+          </div>
+        )}
+
+        {/* Header Profile Summary (Denim Card with Stitching) */}
+        <div className="denim-card p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative">
+          <div className="flex items-center gap-5">
+            <div className="relative group">
+              <img
+                src={student.avatar}
+                alt={student.name}
+                className="w-20 h-20 rounded-2xl object-cover border-2 border-[#DCB35C]/60 shadow-xl"
+              />
+              <button
+                type="button"
+                onClick={() => profilePhotoInputRef.current?.click()}
+                title="Cambiar Foto de Perfil Directamente"
+                className="absolute -bottom-2 -right-2 p-1.5 bg-[#223C63] hover:bg-[#1A2B45] text-[#DCB35C] border border-[#DCB35C]/50 rounded-xl shadow-md transition cursor-pointer"
+              >
+                <Camera className="w-4 h-4" />
+              </button>
+              <input
+                type="file"
+                ref={profilePhotoInputRef}
+                accept="image/*"
+                onChange={handleAvatarFileChange}
+                className="hidden"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-2 denim-patch px-2.5 py-0.5 text-[11px]">
+                <Sparkles className="w-3 h-3 text-[#DCB35C]" />
+                <span>Año Escolar {activeYear}</span>
+                <span className="text-slate-500">•</span>
+                <span className="text-white font-semibold">{student.gradeLevel} ({student.section})</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-black font-slab text-white tracking-tight">
+                {student.name}
+              </h1>
+              <p className="text-xs text-slate-300 font-mono flex items-center gap-4">
+                <span>C.I: <strong className="text-white font-bold">{student.cedula || 'Sin Cédula'}</strong></span>
+                <span>•</span>
+                <span>{student.email}</span>
+              </p>
+            </div>
           </div>
 
-          <div className="glass-surface p-6 sm:p-7 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <div className="relative group">
-                {student.avatar ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setReportCardModalOpen(true)}
+              className="px-4 py-2.5 bg-[#101c30] hover:bg-[#1A2B45] text-[#f0c36d] border border-stitch-subtle rounded-xl text-xs font-bold font-slab flex items-center gap-2 transition cursor-pointer shadow-md"
+            >
+              <Printer className="w-4 h-4 text-[#DCB35C]" />
+              <span>Ver Boletín Oficial</span>
+            </button>
+            <button
+              onClick={() => setMemoryModalOpen(true)}
+              className="px-4 py-2.5 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] hover:brightness-105 text-[#1A2B45] rounded-xl text-xs font-bold font-slab flex items-center gap-2 shadow-md transition cursor-pointer"
+            >
+              <Upload className="w-4 h-4" />
+              <span>Subir Foto al Anuario</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Sub-Navigation Tabs */}
+        <div className="flex flex-wrap gap-2 border-b border-slate-700/60 pb-3 text-xs font-medium">
+          {[
+            { id: 'grades', label: 'Mis Calificaciones', icon: BookOpen },
+            { id: 'schedule', label: 'Horario Escolar', icon: Clock },
+            { id: 'carnet', label: 'Mi Carnet Estudiantil', icon: IdCard },
+            { id: 'plans', label: 'Planes de Evaluación', icon: Calendar },
+            { id: 'certificates', label: `Certificados (${studentCerts.length})`, icon: Award },
+            { id: 'attendance', label: 'Inasistencias', icon: FileText },
+            { id: 'memories', label: 'Anuario y Recuerdos', icon: Camera },
+            { id: 'profile', label: 'Expediente & Cédula', icon: User },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeSubTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveSubTab(tab.id)}
+                className={`px-3.5 py-2 rounded-xl transition flex items-center gap-2 cursor-pointer ${
+                  isActive
+                    ? 'bg-[#223C63] text-white font-bold font-slab border border-[#DCB35C]/50 shadow-inner'
+                    : 'bg-[#152338]/80 text-slate-300 hover:text-white hover:bg-[#1A2B45] border border-slate-700/60'
+                }`}
+              >
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#DCB35C]' : 'text-slate-400'}`} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* SUBTAB: GRADES */}
+        {activeSubTab === 'grades' && (
+          <div className="space-y-6 animate-fade-in">
+            {/* Quick Metrics */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="denim-card p-5">
+                <div className="text-xs text-slate-400 font-medium uppercase font-slab">Promedio General</div>
+                <div className="text-3xl font-black font-slab text-[#f0c36d] mt-1">{generalAvg} <span className="text-sm text-slate-400">/ 20</span></div>
+                <p className="text-[11px] text-slate-400 mt-1">Escala oficial de evaluación venezolana</p>
+              </div>
+
+              <div className="denim-card p-5">
+                <div className="text-xs text-slate-400 font-medium uppercase font-slab">Asignaturas Matriculadas</div>
+                <div className="text-3xl font-black font-slab text-white mt-1">{subjects.length}</div>
+                <p className="text-[11px] text-slate-400 mt-1">Plan de estudio del {student.gradeLevel}</p>
+              </div>
+
+              <div className="denim-card p-5">
+                <div className="text-xs text-slate-400 font-medium uppercase font-slab">Año y Sección Activa</div>
+                <div className="text-3xl font-black font-slab text-white mt-1">{student.gradeLevel}</div>
+                <p className="text-[11px] text-[#DCB35C] mt-1">{student.section} • Año Escolar {activeYear}</p>
+              </div>
+            </div>
+
+            {/* Subject List */}
+            <div className="denim-card p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
+                <div>
+                  <h2 className="text-base font-bold font-slab text-white">Rendimiento por Asignatura</h2>
+                  <p className="text-xs text-slate-400">Calificaciones acumuladas registradas por el cuerpo docente</p>
+                </div>
+                <button
+                  onClick={() => setReportCardModalOpen(true)}
+                  className="px-3.5 py-1.5 bg-[#223C63] hover:bg-[#1A2B45] text-white border border-[#DCB35C]/40 rounded-xl text-xs font-bold font-slab flex items-center gap-1.5 cursor-pointer shadow-sm"
+                >
+                  <Printer className="w-3.5 h-3.5 text-[#DCB35C]" />
+                  <span>Imprimir Boletín</span>
+                </button>
+              </div>
+
+              {subjects.length === 0 ? (
+                <div className="p-8 text-center rounded-2xl bg-[#101c30] border-stitch-subtle">
+                  <BookOpen className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+                  <div className="font-bold text-slate-300 font-slab">No hay asignaturas registradas</div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    La dirección cargará las materias oficiales del plan curricular.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {subjectAverages.map((sub) => (
+                    <div key={sub.id} className="p-4 rounded-xl bg-[#101c30] border border-slate-700/80 hover:border-[#DCB35C]/50 transition">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <div className="font-bold text-white text-sm font-slab">{sub.name}</div>
+                          <div className="text-[11px] text-slate-400">Prof: {sub.teacherName || 'Docente titular'}</div>
+                        </div>
+                        <div className="text-right">
+                          <span className={`text-lg font-black font-mono ${sub.average && parseFloat(sub.average) >= 10 ? 'text-[#f0c36d]' : 'text-slate-400'}`}>
+                            {sub.average ? `${sub.average} pts` : 'Sin nota'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-400 flex justify-between">
+                        <span>Evaluaciones: {sub.grades.length}</span>
+                        <span>Código: {sub.code || 'MAT-CIV'}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* SUBTAB: CARNET ESTUDIANTIL (Requisito 1 & 2) */}
+        {activeSubTab === 'carnet' && (
+          <div className="space-y-6 animate-fade-in max-w-xl mx-auto">
+            <div className="text-center space-y-1 mb-2">
+              <h2 className="text-xl font-bold font-slab text-white">Carnet Estudiantil Oficial</h2>
+              <p className="text-xs text-slate-400">Identificación institucional para el Año Escolar {activeYear}</p>
+            </div>
+
+            {/* Official Venezuelan High School ID Card */}
+            <div className="bg-gradient-to-br from-[#1A2B45] via-[#223C63] to-[#101c30] rounded-3xl p-6 border-2 border-[#DCB35C] shadow-2xl text-white relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-36 h-36 bg-[#DCB35C]/10 rounded-full blur-2xl pointer-events-none"></div>
+
+              {/* Card Header */}
+              <div className="flex items-center justify-between border-b border-[#DCB35C]/30 pb-3 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-[#101c30] border border-[#DCB35C]/50 flex items-center justify-center text-[#DCB35C]">
+                    <School className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-[10px] uppercase font-bold text-[#f0c36d] tracking-widest font-slab">República Bolivariana de Venezuela</div>
+                    <div className="text-xs font-black font-slab text-white uppercase">{institution.name}</div>
+                  </div>
+                </div>
+                <span className="denim-patch px-2 py-0.5 text-[10px] font-mono">{activeYear}</span>
+              </div>
+
+              {/* Card Body */}
+              <div className="flex flex-col sm:flex-row items-center gap-5 my-3">
+                <div className="relative shrink-0">
                   <img
                     src={student.avatar}
                     alt={student.name}
-                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border border-slate-700 shadow-md"
+                    className="w-24 h-28 rounded-xl object-cover border-2 border-white shadow-md"
                   />
-                ) : (
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400">
-                    <User className="w-8 h-8" />
+                  <div className="absolute -bottom-2 inset-x-0 bg-[#DCB35C] text-[#1A2B45] text-[9px] font-bold uppercase text-center rounded py-0.5">
+                    Estudiante
                   </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => profilePhotoInputRef.current?.click()}
-                  title="Cambiar foto de perfil"
-                  className="absolute -bottom-1.5 -right-1.5 p-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white shadow-xs transition"
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                </button>
-                <input
-                  type="file"
-                  ref={profilePhotoInputRef}
-                  accept="image/*"
-                  onChange={handleProfilePhotoChange}
-                  className="hidden"
-                />
-              </div>
-
-              <div>
-                <span className="px-2.5 py-0.5 rounded-md bg-blue-500/15 text-blue-300 text-[11px] font-semibold border border-blue-400/20 inline-block mb-1">
-                  Estudiante Regular
-                </span>
-                <h1 className="text-2xl sm:text-3xl font-bold font-heading text-white">
-                  {student.name}
-                </h1>
-                <p className="text-xs text-slate-400">
-                  {student.studentIdNumber || 'C.I. Sin registrar'} • {student.gradeLevel || 'Año no asignado'} • {institution.name}
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2.5 text-center w-full md:w-auto">
-              <div className="glass-surface-subtle px-4 py-2.5 rounded-xl text-center">
-                <div className="text-xl font-bold font-heading text-white">{generalAvg}</div>
-                <div className="text-[10px] text-slate-400 uppercase font-medium">Promedio</div>
-              </div>
-              <div className="glass-surface-subtle px-4 py-2.5 rounded-xl text-center">
-                <div className="text-xl font-bold font-heading text-emerald-400">
-                  {student.attendanceRate || 0}%
                 </div>
-                <div className="text-[10px] text-slate-400 uppercase font-medium">Asistencia</div>
-              </div>
-              <div className="glass-surface-subtle px-4 py-2.5 rounded-xl text-center">
-                <div className="text-xl font-bold font-heading text-blue-400">
-                  {studentCerts.length}
-                </div>
-                <div className="text-[10px] text-slate-400 uppercase font-medium">Certificados</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* 2. Subtabs Navigation Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6">
-        <div className="glass-surface rounded-xl p-1 flex gap-1 overflow-x-auto text-xs font-semibold shadow-md">
-          <button
-            onClick={() => setActiveSubTab('grades')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
-              activeSubTab === 'grades' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <BookOpen className="w-4 h-4" />
-            <span>Calificaciones y Boletín</span>
-          </button>
+                <div className="space-y-2 text-center sm:text-left text-xs w-full">
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase block">Nombre Completo:</span>
+                    <strong className="text-white text-base font-slab">{student.name}</strong>
+                  </div>
 
-          <button
-            onClick={() => setActiveSubTab('schedule')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
-              activeSubTab === 'schedule' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <Calendar className="w-4 h-4" />
-            <span>Horario de Clases</span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('plans')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
-              activeSubTab === 'plans' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            <span>Planes de Evaluación</span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('certificates')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
-              activeSubTab === 'certificates' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <Award className="w-4 h-4" />
-            <span>Certificados y Menciones ({studentCerts.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('attendance')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
-              activeSubTab === 'attendance' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <Clock className="w-4 h-4" />
-            <span>Asistencias y Faltas ({studentAtts.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('memories')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
-              activeSubTab === 'memories' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <Camera className="w-4 h-4" />
-            <span>Recuerdos de Mi Año ({memories.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('profile')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition shrink-0 ${
-              activeSubTab === 'profile' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <User className="w-4 h-4" />
-            <span>Mis Datos y Foto de Perfil</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 3. Main Workspace */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-        {/* SUBTAB: GRADES & REPORT CARD */}
-        {activeSubTab === 'grades' && (
-          <div className="space-y-6">
-            <div className="glass-card p-6 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-base font-bold font-heading text-white">
-                  Boletín y Resumen de Calificaciones
-                </h2>
-                <p className="text-xs text-slate-400">
-                  Consulta de notas parciales, ponderaciones y emisión del boletín adaptado
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setReportCardModalOpen(true)}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs rounded-lg flex items-center gap-1.5 transition shadow-xs"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>Imprimir Boletín Oficial</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Asignaturas Grid */}
-            {subjects.length === 0 ? (
-              <div className="glass-card p-12 text-center rounded-2xl">
-                <BookOpen className="w-8 h-8 text-slate-600 mx-auto mb-3" />
-                <div className="font-bold text-white text-sm">No hay asignaturas registradas</div>
-                <p className="text-xs text-slate-400 mt-1">
-                  El administrador del plantel aún no ha cargado las materias del año escolar.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {subjectAverages.map((sub) => (
-                  <div key={sub.id} className="glass-card p-5 rounded-2xl flex flex-col justify-between">
+                  <div className="grid grid-cols-2 gap-2 text-xs">
                     <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-bold text-white text-sm">{sub.name}</span>
-                        <span className="text-xs font-bold text-blue-400 bg-blue-950/60 border border-blue-800/60 px-2.5 py-0.5 rounded-md">
-                          {sub.average !== null ? `${sub.average} / 20` : 'Sin nota'}
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-slate-400 mb-3">{sub.teacherName || 'Docente asignado'}</div>
-
-                      <div className="space-y-2 border-t border-slate-800 pt-3">
-                        {sub.grades.length === 0 ? (
-                          <div className="text-xs text-slate-500 italic py-2 text-center">
-                            Sin evaluaciones cargadas
-                          </div>
-                        ) : (
-                          sub.grades.map((gr) => (
-                            <div
-                              key={gr.id}
-                              className="p-2.5 rounded-lg bg-slate-800/40 border border-slate-700/60 flex items-center justify-between text-xs"
-                            >
-                              <div>
-                                <div className="font-medium text-slate-200">{gr.evaluationTitle}</div>
-                                <div className="text-[10px] text-slate-400">{gr.percentage}% • {gr.date}</div>
-                              </div>
-                              <span className="font-bold text-blue-400">{gr.score}</span>
-                            </div>
-                          ))
-                        )}
-                      </div>
+                      <span className="text-[10px] text-slate-400 uppercase block">Cédula de Identidad:</span>
+                      <strong className="text-[#f0c36d] font-mono text-sm">{student.cedula || 'Pendiente'}</strong>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase block">Año y Sección:</span>
+                      <strong className="text-white">{student.gradeLevel} - {student.section}</strong>
                     </div>
                   </div>
-                ))}
+
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase block">Válido para:</span>
+                    <span className="text-slate-300 font-mono text-[11px]">Año Escolar {activeYear} • Barcelona, Anzoátegui</span>
+                  </div>
+                </div>
               </div>
-            )}
+
+              {/* Card Footer Barcode & DEA */}
+              <div className="pt-3 border-t border-[#DCB35C]/30 flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                <span>CÓDIGO DEA • CIV-EST-{student.id.slice(-6)}</span>
+                <span className="italic">"Enseñando a vivir"</span>
+              </div>
+            </div>
+
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={() => window.print()}
+                className="px-5 py-2.5 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] rounded-xl text-xs font-bold font-slab flex items-center gap-2 shadow-lg cursor-pointer"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Imprimir Carnet Físico</span>
+              </button>
+              <button
+                onClick={() => {
+                  setActiveSubTab('profile');
+                  setEditingProfile(true);
+                }}
+                className="px-4 py-2.5 bg-[#1A2B45] hover:bg-[#223C63] text-white border border-stitch-subtle rounded-xl text-xs font-bold font-slab cursor-pointer"
+              >
+                Actualizar Datos del Carnet
+              </button>
+            </div>
           </div>
         )}
 
-        {/* SUBTAB: SCHEDULE (with recess, day off, free module support) */}
+        {/* SUBTAB: SCHEDULE */}
         {activeSubTab === 'schedule' && (
-          <div className="glass-card p-6 sm:p-7 rounded-2xl space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-base font-bold font-heading text-white">Horario Semanal de Clases</h2>
-                <p className="text-xs text-slate-400">
-                  {student.gradeLevel || 'Bachillerato'} • Turno Matutino • Incluye recesos y módulos
-                </p>
-              </div>
-
-              <button
-                onClick={() => window.print()}
-                className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-medium flex items-center gap-1.5 transition no-print"
-              >
-                <Printer className="w-3.5 h-3.5" />
-                <span>Imprimir Horario</span>
-              </button>
+          <div className="denim-card p-6 space-y-4 animate-fade-in">
+            <div>
+              <h2 className="text-base font-bold font-slab text-white">Horario de Clases y Actividades</h2>
+              <p className="text-xs text-slate-400">Distribución semanal para {student.gradeLevel} ({student.section})</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-              {daysOfWeek.map((day) => {
-                const dayBlocks = schedules.filter((s) => s.day === day || s.day_of_week === day);
-                const isDayOff = dayBlocks.some((b) => b.entry_type === 'day_off');
-
-                return (
-                  <div key={day} className="rounded-xl border border-slate-800 overflow-hidden bg-slate-900/60">
-                    <div className="bg-slate-950 text-slate-200 font-medium text-xs py-2 text-center border-b border-slate-800">
-                      {day}
-                    </div>
-                    <div className="p-2 space-y-2">
-                      {isDayOff ? (
-                        <div className="p-4 rounded-lg bg-blue-950/20 border border-blue-900/30 text-center text-xs text-blue-300">
-                          <span className="font-semibold block mb-0.5">Día Libre</span>
-                          <span className="text-[10px] text-slate-400">Sin actividades académicas</span>
-                        </div>
-                      ) : dayBlocks.length === 0 ? (
-                        <div className="text-xs text-slate-500 py-6 text-center italic">Sin clases</div>
+            {schedules.length === 0 ? (
+              <div className="p-8 text-center rounded-2xl bg-[#101c30] border-stitch-subtle">
+                <Clock className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+                <div className="font-bold text-slate-300 font-slab">Horario no publicado</div>
+                <p className="text-xs text-slate-500 mt-1">Control de Estudios publicará el cronograma del {activeYear}.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+                {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'].map((day) => {
+                  const daySchedules = schedules.filter((s) => s.day_of_week === day || s.day === day);
+                  return (
+                    <div key={day} className="p-3.5 rounded-xl bg-[#101c30] border border-slate-700/80 space-y-2.5">
+                      <div className="font-bold font-slab text-sm text-[#f0c36d] border-b border-slate-800 pb-1">{day}</div>
+                      {daySchedules.length === 0 ? (
+                        <div className="text-[11px] text-slate-500 italic py-2">Sin bloques</div>
                       ) : (
-                        dayBlocks.map((item, idx) => {
-                          const isRecess = item.entry_type === 'recess';
-                          const isFree = item.entry_type === 'free_module';
-
-                          if (isRecess) {
-                            return (
-                              <div key={idx} className="p-2 rounded-lg bg-amber-950/20 border border-amber-900/40 text-center text-xs text-amber-300">
-                                <span className="font-semibold block text-[11px]">Receso Escolar</span>
-                                <span className="text-[10px] text-slate-400">{item.time}</span>
-                              </div>
-                            );
-                          }
-
-                          if (isFree) {
-                            return (
-                              <div key={idx} className="p-2.5 rounded-lg bg-slate-800/40 border border-slate-700/60 text-xs text-slate-400">
-                                <span className="font-medium text-slate-300 block">Módulo Libre</span>
-                                <span className="text-[10px]">{item.time}</span>
-                              </div>
-                            );
-                          }
-
-                          return (
-                            <div key={idx} className="p-3 rounded-lg border border-slate-800 bg-slate-900/90 text-xs">
-                              <div className="font-bold text-white mb-0.5">{item.subject}</div>
-                              <div className="text-[11px] text-slate-400 flex items-center gap-1 mb-1">
-                                <Clock className="w-3 h-3 text-slate-500" />
-                                <span>{item.time}</span>
-                              </div>
-                              <div className="text-[10px] text-blue-400 font-medium">
-                                {item.classroom}
-                              </div>
-                            </div>
-                          );
-                        })
+                        daySchedules.map((b) => (
+                          <div key={b.id} className="p-2 rounded-lg bg-[#16253c] border border-slate-700 text-xs">
+                            <div className="font-semibold text-white">{b.subject_name || b.subject || 'Actividad'}</div>
+                            <div className="text-[10px] text-slate-400">{b.start_time} - {b.end_time || b.time}</div>
+                            {b.classroom_name && (
+                              <div className="text-[10px] text-[#DCB35C]">Aula: {b.classroom_name}</div>
+                            )}
+                          </div>
+                        ))
                       )}
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* SUBTAB: EVALUATION PLANS */}
-        {activeSubTab === 'plans' && (
-          <div className="glass-card p-6 sm:p-7 rounded-2xl space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-base font-bold font-heading text-white">Planes de Evaluación</h2>
-                <p className="text-xs text-slate-400">Fechas de entrega y ponderaciones asignadas</p>
-              </div>
-
-              <button
-                onClick={() => window.print()}
-                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-medium flex items-center gap-1.5 transition no-print"
-              >
-                <Printer className="w-3.5 h-3.5" />
-                <span>Imprimir Planes</span>
-              </button>
-            </div>
-
-            {evaluationPlans.length === 0 ? (
-              <div className="p-10 text-center text-xs text-slate-500 italic">
-                No hay planes de evaluación publicados todavía.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
-                      <th className="py-2.5 px-3">Materia</th>
-                      <th className="py-2.5 px-3">Evaluación</th>
-                      <th className="py-2.5 px-3">Modalidad</th>
-                      <th className="py-2.5 px-3">Fecha</th>
-                      <th className="py-2.5 px-3 text-center">Ponderación</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/80">
-                    {evaluationPlans.map((p) => (
-                      <tr key={p.id} className="hover:bg-slate-800/40">
-                        <td className="py-3 px-3 font-bold text-white">{p.subjectName}</td>
-                        <td className="py-3 px-3 text-slate-200">{p.title}</td>
-                        <td className="py-3 px-3 text-slate-400">{p.type}</td>
-                        <td className="py-3 px-3 font-mono text-slate-400">{p.dueDate}</td>
-                        <td className="py-3 px-3 text-center font-bold text-blue-400">{p.percentage}%</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                  );
+                })}
               </div>
             )}
           </div>
         )}
 
-        {/* SUBTAB: CERTIFICATES & HONORS */}
+        {/* SUBTAB: CERTIFICATES */}
         {activeSubTab === 'certificates' && (
-          <div className="space-y-4">
-            <div className="glass-card p-5 rounded-2xl flex items-center justify-between">
-              <div>
-                <h2 className="text-base font-bold font-heading text-white">
-                  Certificados y Reconocimientos Oficiales
-                </h2>
-                <p className="text-xs text-slate-400">
-                  Emitidos por la Dirección General de Larry González con validación electrónica
-                </p>
-              </div>
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-blue-950 text-blue-300 border border-blue-800">
-                {studentCerts.length} Otorgados
-              </span>
+          <div className="denim-card p-6 space-y-4 animate-fade-in">
+            <div>
+              <h2 className="text-base font-bold font-slab text-white">Certificados y Reconocimientos Oficiales</h2>
+              <p className="text-xs text-slate-400">Reconocimientos de mérito, excelencia y participación emitidos por la Dirección General</p>
             </div>
 
             {studentCerts.length === 0 ? (
-              <div className="glass-card p-12 text-center rounded-2xl">
-                <Award className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-                <div className="font-bold text-white text-sm">Sin certificados emitidos aún</div>
-                <p className="text-xs text-slate-400 mt-1">
-                  Los certificados son asignados exclusivamente por la Dirección General.
-                </p>
+              <div className="p-8 text-center rounded-2xl bg-[#101c30] border-stitch-subtle">
+                <Award className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+                <div className="font-bold text-slate-300 font-slab">No posees certificados emitidos</div>
+                <p className="text-xs text-slate-500 mt-1">Los reconocimientos asignados por la Dirección se reflejarán aquí para su impresión.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {studentCerts.map((cert) => (
-                  <div key={cert.id} className="glass-card p-5 rounded-2xl flex flex-col justify-between">
-                    <div>
-                      <span className="text-[10px] font-bold text-blue-300 bg-blue-950 border border-blue-800 px-2 py-0.5 rounded">
-                        {cert.category === 'grade' ? 'Calificación / Nota' : 'Reconocimiento'}
-                      </span>
-                      <h3 className="font-bold text-white text-sm font-heading mt-2 mb-1">{cert.title}</h3>
-                      <p className="text-xs text-slate-400 mb-3">{cert.description}</p>
-                      <div className="text-[11px] text-slate-500 font-mono">
-                        {cert.issue_date || cert.issueDate} • Cód: {cert.certificate_code || cert.code}
+                  <div key={cert.id} className="p-5 rounded-2xl bg-[#101c30] border border-[#DCB35C]/30 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <span className="denim-patch px-2 py-0.5 text-[10px]">{cert.template_type || 'Académico'}</span>
+                        <h3 className="font-bold text-white text-base font-slab mt-1">{cert.title}</h3>
+                      </div>
+                      <div className="w-9 h-9 rounded-xl bg-[#223C63] border border-[#DCB35C]/60 flex items-center justify-center text-[#DCB35C] shrink-0">
+                        <Award className="w-5 h-5" />
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => setSelectedCertificate(cert)}
-                      className="mt-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg transition"
-                    >
-                      Ver Diploma e Imprimir
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+                    <p className="text-xs text-slate-300 line-clamp-2">{cert.description}</p>
 
-        {/* SUBTAB: ATTENDANCE */}
-        {activeSubTab === 'attendance' && (
-          <div className="glass-card p-6 sm:p-7 rounded-2xl space-y-4">
-            <h2 className="text-base font-bold font-heading text-white">
-              Historial de Inasistencias y Faltas
-            </h2>
-            {studentAtts.length === 0 ? (
-              <div className="p-8 text-center text-xs text-slate-500 italic">
-                Asistencia íntegra. No posees inasistencias registradas.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {studentAtts.map((att) => (
-                  <div key={att.id} className="p-3.5 rounded-xl border border-slate-800 bg-slate-900/60 flex items-center justify-between text-xs">
-                    <div>
-                      <div className="font-bold text-white">{att.subject} • {att.date}</div>
-                      <div className="text-slate-400 mt-0.5">{att.notes}</div>
+                    {cert.score_note && (
+                      <div className="text-xs font-mono text-[#f0c36d] font-bold">
+                        Calificación: {cert.score_note} pts
+                      </div>
+                    )}
+
+                    <div className="pt-2 border-t border-slate-800 flex justify-between items-center text-xs">
+                      <span className="text-[10px] text-slate-500 font-mono">Emisión: {cert.issue_date || cert.issued_date}</span>
+                      <button
+                        onClick={() => setSelectedCertificate(cert)}
+                        className="px-3 py-1.5 bg-[#DCB35C] hover:bg-[#f0c36d] text-[#1A2B45] font-bold font-slab rounded-lg flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                        <span>Ver e Imprimir</span>
+                      </button>
                     </div>
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-800">
-                      {att.statusLabel}
-                    </span>
                   </div>
                 ))}
               </div>
@@ -602,50 +568,45 @@ export default function StudentPortal() {
           </div>
         )}
 
-        {/* SUBTAB: RECUERDOS (Students Upload Directly with Image Files) */}
+        {/* SUBTAB: MEMORIES / ANUARIO */}
         {activeSubTab === 'memories' && (
-          <div className="space-y-6">
-            <div className="glass-card p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="denim-card p-6 space-y-5 animate-fade-in">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
-                <h2 className="text-base font-bold font-heading text-white">Anuario y Recuerdos de Mi Año</h2>
-                <p className="text-xs text-slate-400">
-                  Sube tus fotos y momentos compartidos con tus compañeros de clase
-                </p>
+                <h2 className="text-base font-bold font-slab text-white">Anuario Escolar & Recuerdos</h2>
+                <p className="text-xs text-slate-400">Comparte momentos con tu promoción en el Colegio Integral Venezuela</p>
               </div>
-
               <button
                 onClick={() => setMemoryModalOpen(true)}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs rounded-lg flex items-center gap-1.5 transition shadow-xs"
+                className="px-4 py-2 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab text-xs rounded-xl shadow-md flex items-center gap-2 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
-                <span>Subir Mi Recuerdo</span>
+                <span>Subir Nueva Fotografía</span>
               </button>
             </div>
 
             {memories.length === 0 ? (
-              <div className="glass-card p-12 text-center rounded-2xl">
-                <Camera className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-                <div className="font-bold text-white text-sm">Aún no hay recuerdos publicados</div>
-                <p className="text-xs text-slate-400 mt-1">
-                  Sé el primero de tu promoción en subir una fotografía al anuario escolar.
-                </p>
+              <div className="p-8 text-center rounded-2xl bg-[#101c30] border-stitch-subtle">
+                <Camera className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+                <div className="font-bold text-slate-300 font-slab">El anuario está esperando fotos</div>
+                <p className="text-xs text-slate-500 mt-1">Sé el primero de tu sección en subir una foto conmemorativa.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {memories.map((m) => (
-                  <div key={m.id} className="glass-card rounded-2xl overflow-hidden text-xs">
+                  <div key={m.id} className="rounded-2xl overflow-hidden bg-[#101c30] border border-slate-700/80 text-xs shadow-md">
                     <div className="h-44 overflow-hidden relative">
-                      <img src={m.image} alt={m.title} className="w-full h-full object-cover" />
-                      <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded bg-slate-950/80 text-white text-[10px] font-medium backdrop-blur-xs">
-                        {m.gradeYear || m.grade_year || 'Bachillerato'} • {m.category}
+                      <img src={m.image || m.photo_url} alt={m.title} className="w-full h-full object-cover" />
+                      <span className="absolute top-2.5 left-2.5 px-2.5 py-0.5 rounded-md denim-patch text-[10px]">
+                        {m.grade_year || m.year_title || 'Bachillerato'}
                       </span>
                     </div>
-                    <div className="p-4">
-                      <div className="font-bold text-white text-sm mb-1">{m.title}</div>
-                      <p className="text-slate-400 leading-relaxed mb-3">{m.description}</p>
-                      <div className="text-[10px] text-slate-500 pt-2 border-t border-slate-800 flex justify-between">
-                        <span>Por: {m.authorName || m.author_name || 'Estudiante'}</span>
-                        <span>{m.date}</span>
+                    <div className="p-4 space-y-1.5">
+                      <div className="font-bold text-white text-sm font-slab">{m.title}</div>
+                      <p className="text-slate-300 line-clamp-2 leading-relaxed">{m.description}</p>
+                      <div className="text-[10px] text-slate-400 pt-2 border-t border-slate-800 flex justify-between">
+                        <span>Por: {m.author_name || m.student_name || 'Estudiante'}</span>
+                        <span>{m.date || 'Año 2027-2028'}</span>
                       </div>
                     </div>
                   </div>
@@ -655,102 +616,216 @@ export default function StudentPortal() {
           </div>
         )}
 
-        {/* SUBTAB: STUDENT PROFILE & PHOTO EDIT */}
+        {/* SUBTAB: PROFILE & CEDULA EDIT (Requisito 1 & 7) */}
         {activeSubTab === 'profile' && (
-          <div className="glass-card p-6 sm:p-8 rounded-2xl space-y-6 max-w-2xl">
-            <h2 className="text-base font-bold font-heading text-white">Datos Personales del Estudiante</h2>
-
-            {/* Direct Avatar Upload */}
-            <div className="flex items-center gap-5 p-4 rounded-xl bg-slate-900/60 border border-slate-800">
-              {student.avatar ? (
-                <img src={student.avatar} alt="Avatar" className="w-16 h-16 rounded-xl object-cover border border-slate-700" />
-              ) : (
-                <div className="w-16 h-16 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400">
-                  <User className="w-7 h-7" />
-                </div>
-              )}
+          <div className="denim-card p-6 sm:p-8 max-w-2xl mx-auto space-y-6 animate-fade-in">
+            <div className="flex items-center justify-between border-b border-slate-700/60 pb-3">
               <div>
-                <div className="font-bold text-white text-sm mb-1">Foto de Perfil</div>
-                <p className="text-xs text-slate-400 mb-2">Selecciona un archivo desde tu dispositivo</p>
+                <h2 className="text-base font-bold font-slab text-white">Expediente y Datos Personales</h2>
+                <p className="text-xs text-slate-400">Modifica tus datos incompletos como cédula, año escolar y sección</p>
+              </div>
+              {!editingProfile && (
+                <button
+                  type="button"
+                  onClick={() => setEditingProfile(true)}
+                  className="px-3.5 py-1.5 bg-[#DCB35C] hover:bg-[#f0c36d] text-[#1A2B45] font-bold font-slab rounded-xl text-xs cursor-pointer shadow-xs"
+                >
+                  Modificar Mis Datos
+                </button>
+              )}
+            </div>
+
+            {/* Direct Avatar Upload Button (Requisito 7) */}
+            <div className="flex items-center gap-5 p-4 rounded-xl bg-[#101c30] border border-stitch-subtle">
+              <img
+                src={student.avatar}
+                alt="Avatar"
+                className="w-16 h-16 rounded-2xl object-cover border-2 border-[#DCB35C]/60"
+              />
+              <div className="space-y-1">
+                <div className="font-bold text-white text-sm font-slab">Fotografía de Perfil y Carnet</div>
+                <p className="text-xs text-slate-400">Sube directamente tu foto desde el dispositivo (sin pedir enlaces)</p>
                 <button
                   type="button"
                   onClick={() => profilePhotoInputRef.current?.click()}
-                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition"
+                  className="px-3 py-1.5 bg-[#223C63] hover:bg-[#1A2B45] text-[#f0c36d] border border-[#DCB35C]/40 rounded-xl text-xs font-bold font-slab flex items-center gap-1.5 transition cursor-pointer"
                 >
                   <Upload className="w-3.5 h-3.5" />
-                  <span>Subir Foto Directamente</span>
+                  <span>Seleccionar Archivo de Foto</span>
                 </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 text-xs">
-              <div>
-                <label className="text-slate-500 block mb-0.5">Nombre Completo</label>
-                <div className="font-bold text-white text-sm">{student.name}</div>
+            {/* Editing Form (Requisito 1) */}
+            {editingProfile ? (
+              <form onSubmit={handleSaveProfile} className="space-y-4 text-xs">
+                <div>
+                  <label className="block font-medium text-slate-300 mb-1">Nombre Completo</label>
+                  <input
+                    type="text"
+                    required
+                    value={profileForm.name}
+                    onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-medium text-slate-300 mb-1">Cédula de Identidad</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ej. V-31.542.890"
+                      value={profileForm.cedula}
+                      onChange={(e) => setProfileForm({ ...profileForm, cedula: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-medium text-slate-300 mb-1">Teléfono de Contacto</label>
+                    <input
+                      type="tel"
+                      value={profileForm.phone}
+                      onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                      placeholder="+58 414 1234567"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
+                    />
+                  </div>
+                </div>
+
+                {/* Venezuelan School Structure: Año y Sección */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block font-medium text-slate-300 mb-1">Año de Bachillerato</label>
+                    <select
+                      value={profileForm.gradeLevel}
+                      onChange={(e) => setProfileForm({ ...profileForm, gradeLevel: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
+                    >
+                      <option value="1er Año">1er Año de Bachillerato</option>
+                      <option value="2do Año">2do Año de Bachillerato</option>
+                      <option value="3er Año">3er Año de Bachillerato</option>
+                      <option value="4to Año">4to Año de Bachillerato</option>
+                      <option value="5to Año">5to Año de Bachillerato</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-medium text-slate-300 mb-1">Sección Asignada</label>
+                    <select
+                      value={profileForm.section}
+                      onChange={(e) => setProfileForm({ ...profileForm, section: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
+                    >
+                      <option value="Sección A">Sección A</option>
+                      <option value="Sección B">Sección B</option>
+                      <option value="Sección C">Sección C</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-3 border-t border-slate-700/60">
+                  <button
+                    type="button"
+                    onClick={() => setEditingProfile(false)}
+                    className="px-4 py-2 text-slate-400 hover:text-white cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab rounded-xl shadow-md cursor-pointer flex items-center gap-2"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>Guardar Cambios</span>
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <div className="p-3.5 rounded-xl bg-[#101c30] border border-slate-800">
+                  <span className="text-[10px] text-slate-400 uppercase block mb-0.5">Nombre Completo:</span>
+                  <strong className="text-white text-sm font-slab">{student.name}</strong>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-[#101c30] border border-slate-800">
+                  <span className="text-[10px] text-slate-400 uppercase block mb-0.5">Cédula de Identidad:</span>
+                  <strong className="text-[#f0c36d] text-sm font-mono">{student.cedula || 'Sin Cédula'}</strong>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-[#101c30] border border-slate-800">
+                  <span className="text-[10px] text-slate-400 uppercase block mb-0.5">Año Cursado:</span>
+                  <strong className="text-white text-sm">{student.gradeLevel}</strong>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-[#101c30] border border-slate-800">
+                  <span className="text-[10px] text-slate-400 uppercase block mb-0.5">Sección:</span>
+                  <strong className="text-white text-sm">{student.section}</strong>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-[#101c30] border border-slate-800 sm:col-span-2">
+                  <span className="text-[10px] text-slate-400 uppercase block mb-0.5">Correo Institucional:</span>
+                  <strong className="text-slate-300 font-mono">{student.email}</strong>
+                </div>
               </div>
-              <div>
-                <label className="text-slate-500 block mb-0.5">Cédula de Identidad</label>
-                <div className="font-bold text-white text-sm">{student.studentIdNumber || 'Sin registrar'}</div>
-              </div>
-              <div>
-                <label className="text-slate-500 block mb-0.5">Año y Sección</label>
-                <div className="font-bold text-white text-sm">{student.gradeLevel || 'Sin asignar'}</div>
-              </div>
-              <div>
-                <label className="text-slate-500 block mb-0.5">Correo Electrónico</label>
-                <div className="font-bold text-white text-sm">{student.email}</div>
-              </div>
-            </div>
+            )}
           </div>
         )}
       </div>
 
       {/* Memory Upload Modal */}
       {memoryModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-          <div className="glass-surface border border-slate-700 rounded-2xl w-full max-w-md p-6">
-            <h3 className="text-base font-bold font-heading text-white mb-4">
-              Subir Foto o Recuerdo al Anuario
-            </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+          <div className="bg-[#152338] border border-stitch rounded-2xl w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-base font-bold font-slab text-white">
+                Subir Fotografía al Anuario
+              </h3>
+              <button onClick={() => setMemoryModalOpen(false)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
             <form onSubmit={handleSaveMemory} className="space-y-3.5 text-xs">
               <div>
-                <label className="block text-slate-400 mb-1">Título de la Actividad</label>
+                <label className="block text-slate-300 mb-1 font-medium">Título de la Actividad</label>
                 <input
                   type="text"
                   required
-                  placeholder="Ej. Encuentro Deportivo en Colinas del Neverí"
+                  placeholder="Ej. Aniversario del Colegio / Feria Científica"
                   value={memoryForm.title}
                   onChange={(e) => setMemoryForm({ ...memoryForm, title: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:outline-hidden focus:border-[#DCB35C]"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-400 mb-1">Categoría</label>
+                <label className="block text-slate-300 mb-1 font-medium">Categoría</label>
                 <select
                   value={memoryForm.category}
                   onChange={(e) => setMemoryForm({ ...memoryForm, category: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                  className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:outline-hidden focus:border-[#DCB35C]"
                 >
                   <option value="Proyectos">Proyectos y Ciencia</option>
-                  <option value="Deportes">Deportes</option>
+                  <option value="Deportes">Deportes y Juegos</option>
                   <option value="Eventos">Eventos y Aniversario</option>
-                  <option value="Vida Escolar">Vida Escolar</option>
+                  <option value="Vida Escolar">Convivencia y Amigos</option>
                 </select>
               </div>
 
               {/* Direct File Upload Button */}
               <div>
-                <label className="block text-slate-400 mb-1">Fotografía del Recuerdo</label>
+                <label className="block text-slate-300 mb-1 font-medium">Fotografía (Archivo)</label>
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
                     onClick={() => memoryFileInputRef.current?.click()}
-                    className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg text-white font-medium flex items-center gap-2"
+                    className="px-3.5 py-2 bg-[#223C63] hover:bg-[#1A2B45] border border-[#DCB35C]/50 rounded-xl text-[#f0c36d] font-bold font-slab flex items-center gap-2 cursor-pointer"
                   >
-                    <Upload className="w-3.5 h-3.5 text-blue-400" />
-                    <span>Seleccionar Archivo de Foto</span>
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Seleccionar Archivo</span>
                   </button>
                   <input
                     type="file"
@@ -760,26 +835,26 @@ export default function StudentPortal() {
                     className="hidden"
                   />
                   {memoryImagePreview && (
-                    <span className="text-[11px] text-emerald-400 font-medium">Foto cargada</span>
+                    <span className="text-[11px] text-emerald-400 font-medium">Foto lista para subir</span>
                   )}
                 </div>
 
                 {memoryImagePreview && (
-                  <div className="mt-2.5 h-28 rounded-lg overflow-hidden border border-slate-700">
+                  <div className="mt-2.5 h-28 rounded-xl overflow-hidden border border-slate-700">
                     <img src={memoryImagePreview} alt="Preview" className="w-full h-full object-cover" />
                   </div>
                 )}
               </div>
 
               <div>
-                <label className="block text-slate-400 mb-1">Descripción / Anécdota</label>
+                <label className="block text-slate-300 mb-1 font-medium">Descripción o Mensaje</label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   required
-                  placeholder="Escribe qué pasó en este momento..."
+                  placeholder="Relata qué vivieron en ese momento..."
                   value={memoryForm.description}
                   onChange={(e) => setMemoryForm({ ...memoryForm, description: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white"
+                  className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:outline-hidden focus:border-[#DCB35C]"
                 ></textarea>
               </div>
 
@@ -787,13 +862,13 @@ export default function StudentPortal() {
                 <button
                   type="button"
                   onClick={() => setMemoryModalOpen(false)}
-                  className="px-3 py-1.5 text-slate-400 hover:text-white"
+                  className="px-3 py-1.5 text-slate-400 hover:text-white cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg"
+                  className="px-4 py-2 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab rounded-xl shadow-md cursor-pointer"
                 >
                   Publicar Recuerdo
                 </button>

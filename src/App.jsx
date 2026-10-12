@@ -13,7 +13,7 @@ function MainLayout() {
   const { activeTab } = useApp();
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0b0f19] text-slate-100 antialiased selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen flex flex-col bg-[#101c30] denim-pattern text-slate-100 antialiased selection:bg-[#DCB35C] selection:text-[#1A2B45]">
       <Navbar />
 
       <main className="flex-1">
