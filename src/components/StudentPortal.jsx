@@ -50,20 +50,7 @@ export default function StudentPortal() {
   const [selectedCertificate, setSelectedCertificate] = useState(null);
   const [reportCardModalOpen, setReportCardModalOpen] = useState(false);
 
-  // Profile edit form state (Requisito 1)
-  const [editingProfile, setEditingProfile] = useState(false);
-  const [profileForm, setProfileForm] = useState({
-    name: currentUser?.name || '',
-    cedula: currentUser?.cedula || '',
-    gradeLevel: currentUser?.gradeLevel || currentUser?.grade_year || '1er Año',
-    section: currentUser?.section || 'Sección A',
-    phone: currentUser?.phone || ''
-  });
-
-  // Profile photo upload input ref
-  const profilePhotoInputRef = useRef(null);
-
-  // Student object
+  // Student object (Solo Lectura - Administrado por Dirección)
   const student = {
     id: currentUser?.id || 'stu-temp',
     name: currentUser?.name || 'Estudiante Regular',
@@ -71,7 +58,7 @@ export default function StudentPortal() {
     cedula: currentUser?.cedula || '',
     gradeLevel: currentUser?.gradeLevel || currentUser?.grade_year || '1er Año',
     section: currentUser?.section || 'Sección A',
-    avatar: currentUser?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+    avatar: currentUser?.avatar || '',
     phone: currentUser?.phone || ''
   };
 
@@ -89,33 +76,6 @@ export default function StudentPortal() {
     description: ''
   });
   const memoryFileInputRef = useRef(null);
-
-  // Handle direct avatar photo change (Requisito 7)
-  const handleAvatarFileChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      try {
-        const dataUrl = await readFileAsDataURL(file);
-        updateStudentProfile({ avatar: dataUrl });
-      } catch (err) {
-        notify('Error al cargar la imagen', 'error');
-      }
-    }
-  };
-
-  // Handle saving personal details (Requisito 1)
-  const handleSaveProfile = (e) => {
-    e.preventDefault();
-    updateStudentProfile({
-      name: profileForm.name,
-      cedula: profileForm.cedula,
-      gradeLevel: profileForm.gradeLevel,
-      grade_year: profileForm.gradeLevel,
-      section: profileForm.section,
-      phone: profileForm.phone
-    });
-    setEditingProfile(false);
-  };
 
   // Memory file change
   const handleMemoryFileChange = async (e) => {
@@ -204,13 +164,10 @@ export default function StudentPortal() {
               </div>
             </div>
             <button
-              onClick={() => {
-                setActiveSubTab('profile');
-                setEditingProfile(true);
-              }}
-              className="px-4 py-2 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] hover:brightness-105 text-[#1A2B45] font-bold font-slab text-xs rounded-xl shadow-md transition shrink-0 cursor-pointer"
+              onClick={() => setActiveSubTab('profile')}
+              className="px-4 py-2 bg-[#223C63] hover:bg-[#1A2B45] text-[#f0c36d] border border-[#DCB35C]/40 font-bold font-slab text-xs rounded-lg transition shrink-0 cursor-pointer"
             >
-              Completar Mis Datos
+              Ver Mi Expediente
             </button>
           </div>
         )}
@@ -218,27 +175,18 @@ export default function StudentPortal() {
         {/* Header Profile Summary (Denim Card with Stitching) */}
         <div className="denim-card p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative">
           <div className="flex items-center gap-5">
-            <div className="relative group">
-              <img
-                src={student.avatar}
-                alt={student.name}
-                className="w-20 h-20 rounded-2xl object-cover border-2 border-[#DCB35C]/60 shadow-xl"
-              />
-              <button
-                type="button"
-                onClick={() => profilePhotoInputRef.current?.click()}
-                title="Cambiar Foto de Perfil Directamente"
-                className="absolute -bottom-2 -right-2 p-1.5 bg-[#223C63] hover:bg-[#1A2B45] text-[#DCB35C] border border-[#DCB35C]/50 rounded-xl shadow-md transition cursor-pointer"
-              >
-                <Camera className="w-4 h-4" />
-              </button>
-              <input
-                type="file"
-                ref={profilePhotoInputRef}
-                accept="image/*"
-                onChange={handleAvatarFileChange}
-                className="hidden"
-              />
+            <div className="relative">
+               {student.avatar ? (
+                 <img
+                   src={student.avatar}
+                   alt={student.name}
+                   className="w-20 h-20 rounded-2xl object-cover border-2 border-[#DCB35C]/60 shadow-xl"
+                 />
+               ) : (
+                 <div className="w-20 h-20 rounded-2xl bg-[#1A2B45] border-2 border-[#DCB35C]/60 shadow-xl flex items-center justify-center text-[#DCB35C]">
+                   <User className="w-10 h-10 text-[#DCB35C]/70" />
+                 </div>
+               )}
             </div>
 
             <div className="space-y-1">
@@ -413,11 +361,20 @@ export default function StudentPortal() {
               {/* Card Body */}
               <div className="flex flex-col sm:flex-row items-center gap-5 my-3">
                 <div className="relative shrink-0">
-                  <img
-                    src={student.avatar}
-                    alt={student.name}
-                    className="w-24 h-28 rounded-lg object-cover border-2 border-white shadow-md"
-                  />
+                  {student.avatar ? (
+                    <img
+                      src={student.avatar}
+                      alt={student.name}
+                      className="w-24 h-28 rounded-lg object-cover border-2 border-white shadow-md"
+                    />
+                  ) : (
+                    <div className="w-24 h-28 rounded-lg bg-[#1A2B45] border-2 border-white shadow-md flex items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-12 h-12 text-white/40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="8" r="4"/>
+                        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                      </svg>
+                    </div>
+                  )}
                   <div className="absolute -bottom-2 inset-x-0 bg-[#DCB35C] text-[#1A2B45] text-[9px] font-bold uppercase text-center rounded py-0.5">
                     Estudiante
                   </div>
@@ -454,22 +411,13 @@ export default function StudentPortal() {
               </div>
             </div>
 
-            <div className="flex justify-center gap-3">
+            <div className="flex justify-center">
               <button
                 onClick={() => window.print()}
                 className="px-5 py-2.5 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] rounded-lg text-xs font-bold font-slab flex items-center gap-2 shadow-lg cursor-pointer"
               >
                 <Printer className="w-4 h-4" />
                 <span>Imprimir Carnet Físico</span>
-              </button>
-              <button
-                onClick={() => {
-                  setActiveSubTab('profile');
-                  setEditingProfile(true);
-                }}
-                className="px-4 py-2.5 bg-[#1A2B45] hover:bg-[#223C63] text-white border border-stitch-subtle rounded-lg text-xs font-bold font-slab cursor-pointer"
-              >
-                Actualizar Datos del Carnet
               </button>
             </div>
           </div>
@@ -717,161 +665,86 @@ export default function StudentPortal() {
           </div>
         )}
 
-        {/* SUBTAB: PROFILE & CEDULA EDIT (Requisito 1 & 7) */}
+        {/* SUBTAB: PROFILE & CEDULA (Solo Lectura) */}
         {activeSubTab === 'profile' && (
           <div className="denim-card p-6 sm:p-8 max-w-2xl mx-auto space-y-6 animate-fade-in">
             <div className="flex items-center justify-between border-b border-slate-700/60 pb-3">
               <div>
-                <h2 className="text-base font-bold font-slab text-white">Expediente y Datos Personales</h2>
-                <p className="text-xs text-slate-400">Modifica tus datos incompletos como cédula, año escolar y sección</p>
+                <h2 className="text-base font-bold font-slab text-white">Expediente Escolar Oficial</h2>
+                <p className="text-xs text-slate-400">Ficha académica certificada por el Departamento de Control de Estudios</p>
               </div>
-              {!editingProfile && (
-                <button
-                  type="button"
-                  onClick={() => setEditingProfile(true)}
-                  className="px-3.5 py-1.5 bg-[#DCB35C] hover:bg-[#f0c36d] text-[#1A2B45] font-bold font-slab rounded-xl text-xs cursor-pointer shadow-xs"
-                >
-                  Modificar Mis Datos
-                </button>
-              )}
+              <div className="denim-patch px-3 py-1 text-[11px] flex items-center gap-1.5 text-[#DCB35C]">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Expediente Certificado</span>
+              </div>
             </div>
 
-            {/* Direct Avatar Upload Button (Requisito 7) */}
+            {/* Official Photo Badge (Solo Lectura) */}
             <div className="flex items-center gap-5 p-4 rounded-xl bg-[#101c30] border border-stitch-subtle">
-              <img
-                src={student.avatar}
-                alt="Avatar"
-                className="w-16 h-16 rounded-2xl object-cover border-2 border-[#DCB35C]/60"
-              />
+              {student.avatar ? (
+                <img
+                  src={student.avatar}
+                  alt={student.name}
+                  className="w-16 h-16 rounded-2xl object-cover border-2 border-[#DCB35C]/60 shrink-0"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-2xl bg-[#1A2B45] border-2 border-[#DCB35C]/60 flex items-center justify-center shrink-0 text-[#DCB35C]">
+                  <User className="w-8 h-8 text-[#DCB35C]/70" />
+                </div>
+              )}
               <div className="space-y-1">
-                <div className="font-bold text-white text-sm font-slab">Fotografía de Perfil y Carnet</div>
-                <p className="text-xs text-slate-400">Sube directamente tu foto desde el dispositivo (sin pedir enlaces)</p>
-                <button
-                  type="button"
-                  onClick={() => profilePhotoInputRef.current?.click()}
-                  className="px-3 py-1.5 bg-[#223C63] hover:bg-[#1A2B45] text-[#f0c36d] border border-[#DCB35C]/40 rounded-xl text-xs font-bold font-slab flex items-center gap-1.5 transition cursor-pointer"
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>Seleccionar Archivo de Foto</span>
-                </button>
+                <div className="font-bold text-white text-sm font-slab">Fotografía Oficial del Expediente</div>
+                <p className="text-xs text-slate-400">
+                  La fotografía del carnet y los recaudos son digitalizados y validados exclusivamente por la Dirección y Control de Estudios.
+                </p>
               </div>
             </div>
 
-            {/* Editing Form (Requisito 1) */}
-            {editingProfile ? (
-              <form onSubmit={handleSaveProfile} className="space-y-4 text-xs">
-                <div>
-                  <label className="block font-medium text-slate-300 mb-1">Nombre Completo</label>
-                  <input
-                    type="text"
-                    required
-                    value={profileForm.name}
-                    onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block font-medium text-slate-300 mb-1">Cédula de Identidad</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Ej. V-31.542.890"
-                      value={profileForm.cedula}
-                      onChange={(e) => setProfileForm({ ...profileForm, cedula: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-medium text-slate-300 mb-1">Teléfono de Contacto</label>
-                    <input
-                      type="tel"
-                      value={profileForm.phone}
-                      onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-                      placeholder="+58 414 1234567"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
-                    />
-                  </div>
-                </div>
-
-                {/* Venezuelan School Structure: Año y Sección */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block font-medium text-slate-300 mb-1">Año de Bachillerato</label>
-                    <select
-                      value={profileForm.gradeLevel}
-                      onChange={(e) => setProfileForm({ ...profileForm, gradeLevel: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
-                    >
-                      <option value="1er Año">1er Año de Bachillerato</option>
-                      <option value="2do Año">2do Año de Bachillerato</option>
-                      <option value="3er Año">3er Año de Bachillerato</option>
-                      <option value="4to Año">4to Año de Bachillerato</option>
-                      <option value="5to Año">5to Año de Bachillerato</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-medium text-slate-300 mb-1">Sección Asignada</label>
-                    <select
-                      value={profileForm.section}
-                      onChange={(e) => setProfileForm({ ...profileForm, section: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
-                    >
-                      <option value="Sección A">Sección A</option>
-                      <option value="Sección B">Sección B</option>
-                      <option value="Sección C">Sección C</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-3 pt-3 border-t border-slate-700/60">
-                  <button
-                    type="button"
-                    onClick={() => setEditingProfile(false)}
-                    className="px-4 py-2 text-slate-400 hover:text-white cursor-pointer"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab rounded-xl shadow-md cursor-pointer flex items-center gap-2"
-                  >
-                    <Save className="w-4 h-4" />
-                    <span>Guardar Cambios</span>
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                <div className="p-3.5 rounded-xl bg-[#101c30] border border-slate-800">
-                  <span className="text-[10px] text-slate-400 uppercase block mb-0.5">Nombre Completo:</span>
-                  <strong className="text-white text-sm font-slab">{student.name}</strong>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-[#101c30] border border-slate-800">
-                  <span className="text-[10px] text-slate-400 uppercase block mb-0.5">Cédula de Identidad:</span>
-                  <strong className="text-[#f0c36d] text-sm font-mono">{student.cedula || 'Sin Cédula'}</strong>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-[#101c30] border border-slate-800">
-                  <span className="text-[10px] text-slate-400 uppercase block mb-0.5">Año Cursado:</span>
-                  <strong className="text-white text-sm">{student.gradeLevel}</strong>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-[#101c30] border border-slate-800">
-                  <span className="text-[10px] text-slate-400 uppercase block mb-0.5">Sección:</span>
-                  <strong className="text-white text-sm">{student.section}</strong>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-[#101c30] border border-slate-800 sm:col-span-2">
-                  <span className="text-[10px] text-slate-400 uppercase block mb-0.5">Correo Institucional:</span>
-                  <strong className="text-slate-300 font-mono">{student.email}</strong>
-                </div>
+            {/* Student Data Grid (Solo Lectura) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div className="p-3.5 rounded-xl bg-[#101c30] border border-slate-800">
+                <span className="text-[10px] text-slate-400 uppercase block mb-0.5">Nombre Completo:</span>
+                <strong className="text-white text-sm font-slab">{student.name}</strong>
               </div>
-            )}
+
+              <div className="p-3.5 rounded-xl bg-[#101c30] border border-slate-800">
+                <span className="text-[10px] text-slate-400 uppercase block mb-0.5">Cédula de Identidad:</span>
+                <strong className="text-[#f0c36d] text-sm font-mono">{student.cedula || 'Pendiente de Registro'}</strong>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#101c30] border border-slate-800">
+                <span className="text-[10px] text-slate-400 uppercase block mb-0.5">Año Cursado:</span>
+                <strong className="text-white text-sm">{student.gradeLevel}</strong>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#101c30] border border-slate-800">
+                <span className="text-[10px] text-slate-400 uppercase block mb-0.5">Sección Asignada:</span>
+                <strong className="text-white text-sm">{student.section}</strong>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#101c30] border border-slate-800">
+                <span className="text-[10px] text-slate-400 uppercase block mb-0.5">Año Escolar:</span>
+                <strong className="text-[#DCB35C] font-mono">{activeYear}</strong>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#101c30] border border-slate-800">
+                <span className="text-[10px] text-slate-400 uppercase block mb-0.5">Estatus Académico:</span>
+                <strong className="text-emerald-400">Matrícula Regular Activa</strong>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#101c30] border border-slate-800 sm:col-span-2">
+                <span className="text-[10px] text-slate-400 uppercase block mb-0.5">Correo Institucional:</span>
+                <strong className="text-slate-300 font-mono">{student.email}</strong>
+              </div>
+            </div>
+
+            {/* Institutional Security Notice */}
+            <div className="p-3.5 rounded-xl bg-[#1A2B45] border border-stitch-subtle flex items-start gap-3 text-xs text-slate-300">
+              <ShieldCheck className="w-5 h-5 text-[#DCB35C] shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold text-white">Seguridad de Control de Estudios:</span> Por normativa institucional, los estudiantes no pueden modificar sus datos personales, cédula o fotografía. Cualquier actualización de recaudos debe solicitarse a través de su representante en la oficina de Dirección General.
+              </div>
+            </div>
           </div>
         )}
       </div>

@@ -84,7 +84,15 @@ export function AppProvider({ children }) {
 
   const [evaluationPlans, setEvaluationPlans] = useState(() => {
     const saved = localStorage.getItem('iv_eval_plans');
-    return saved ? JSON.parse(saved) : initialEvaluationPlans;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return parsed.filter((p) => !['plan-1', 'plan-2', 'plan-3', 'plan-4', 'plan-5', 'ep-1', 'ep-2'].includes(p.id));
+      } catch (e) {
+        return [];
+      }
+    }
+    return initialEvaluationPlans;
   });
 
   const [schedules, setSchedules] = useState(() => {
@@ -104,7 +112,15 @@ export function AppProvider({ children }) {
 
   const [memories, setMemories] = useState(() => {
     const saved = localStorage.getItem('iv_memories');
-    return saved ? JSON.parse(saved) : initialMemories;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return parsed.filter((m) => !['mem-1', 'mem-2', 'mem-3', 'mem-4', 'g1', 'g2', 'g3', 'g4'].includes(m.id));
+      } catch (e) {
+        return [];
+      }
+    }
+    return initialMemories;
   });
 
   const [payments, setPayments] = useState(() => {
@@ -247,7 +263,22 @@ export function AppProvider({ children }) {
 
         // Fetch teachers
         const { data: tchData } = await supabase.from('teachers').select('*');
-        if (tchData && tchData.length > 0) setTeachersList(tchData);
+        if (tchData && tchData.length > 0) {
+          const normTeachers = tchData.map(t => ({
+            id: t.id,
+            name: t.full_name || t.name || 'Docente Titular',
+            full_name: t.full_name || t.name || 'Docente Titular',
+            cedula: t.cedula || '',
+            email: t.email,
+            specialty: t.specialty || 'Castellano y Literatura',
+            phone: t.phone || '',
+            password: t.password_plain || t.password || 'docente123',
+            password_plain: t.password_plain || t.password || 'docente123',
+            role: 'teacher',
+            avatar: t.avatar_url || t.avatar || ''
+          }));
+          setTeachersList(normTeachers);
+        }
 
         // Fetch students
         const { data: stuData } = await supabase.from('students').select('*');
@@ -266,7 +297,7 @@ export function AppProvider({ children }) {
             representativeName: s.representative_name || s.representativeName || 'Por asignar',
             phone: s.phone || '',
             status: s.status || 'Activo',
-            avatar: s.avatar_url || s.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'
+            avatar: s.avatar_url || s.avatar || ''
           }));
           setStudents(normStudents);
         }
@@ -319,6 +350,59 @@ export function AppProvider({ children }) {
         const user = session.user;
         const currentAdminEmail = adminUser.email?.toLowerCase();
         const isAdmin = user.email?.toLowerCase() === currentAdminEmail;
+        const targetGoogleRole = sessionStorage.getItem('iv_target_google_role');
+        sessionStorage.removeItem('iv_target_google_role');
+
+        if (isAdmin) {
+          loginAsAdmin();
+          return;
+        }
+
+        // Check if user is a registered teacher
+        let matchedTeacher = null;
+        try {
+          const { data: dbTeachers } = await supabase
+            .from('teachers')
+            .select('*')
+            .ilike('email', user.email);
+          if (dbTeachers && dbTeachers.length > 0) {
+            matchedTeacher = dbTeachers[0];
+          }
+        } catch (e) {}
+
+        if (!matchedTeacher) {
+          matchedTeacher = teachersList.find(
+            (t) => t.email?.trim().toLowerCase() === user.email?.trim().toLowerCase()
+          );
+        }
+
+        // Teacher role evaluation
+        if (targetGoogleRole === 'teacher' || (matchedTeacher && targetGoogleRole !== 'representative')) {
+          if (!matchedTeacher) {
+            await supabase.auth.signOut();
+            setCurrentUser(null);
+            setActiveTab('home');
+            notify('Este correo de Google no se encuentra registrado en la nómina oficial de docentes.', 'error');
+            return;
+          }
+
+          const teacherUser = {
+            id: matchedTeacher.id,
+            name: matchedTeacher.full_name || matchedTeacher.name || user.user_metadata?.full_name || 'Docente Titular',
+            full_name: matchedTeacher.full_name || matchedTeacher.name || 'Docente Titular',
+            email: matchedTeacher.email || user.email,
+            cedula: matchedTeacher.cedula || '',
+            specialty: matchedTeacher.specialty || 'Educación Media General',
+            phone: matchedTeacher.phone || '',
+            role: 'teacher',
+            avatar: matchedTeacher.avatar_url || matchedTeacher.avatar || user.user_metadata?.avatar_url || '',
+            isSupabaseUser: true,
+          };
+          setCurrentUser(teacherUser);
+          setActiveTab('teacher-portal');
+          notify(`Bienvenido al portal docente, ${teacherUser.name}`);
+          return;
+        }
 
         try {
           const { data: profile } = await supabase
@@ -327,12 +411,12 @@ export function AppProvider({ children }) {
             .eq('id', user.id)
             .single();
 
-          const resolvedRole = isAdmin ? 'admin' : (profile?.role || user.user_metadata?.role || 'representative');
+          const resolvedRole = profile?.role || user.user_metadata?.role || 'representative';
 
           const userObj = {
             id: user.id,
             email: user.email,
-            name: isAdmin ? adminUser.name : (profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0]),
+            name: profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0],
             cedula: profile?.cedula || '',
             role: resolvedRole,
             gradeLevel: profile?.grade_level || user.user_metadata?.grade_level || '1er Año',
@@ -342,21 +426,19 @@ export function AppProvider({ children }) {
           };
           setCurrentUser(userObj);
 
-          if (isAdmin) setActiveTab('admin-portal');
-          else if (resolvedRole === 'teacher') setActiveTab('teacher-portal');
-          else if (resolvedRole === 'representative') setActiveTab('representative-portal');
+          if (resolvedRole === 'representative') setActiveTab('representative-portal');
           else setActiveTab('student-portal');
         } catch (e) {
-          const resolvedRole = isAdmin ? 'admin' : 'representative';
           const userObj = {
             id: user.id,
             email: user.email,
-            name: isAdmin ? adminUser.name : user.email?.split('@')[0],
-            role: resolvedRole,
+            name: user.email?.split('@')[0],
+            role: 'representative',
+            avatar: '',
             isSupabaseUser: true,
           };
           setCurrentUser(userObj);
-          if (isAdmin) setActiveTab('admin-portal');
+          setActiveTab('representative-portal');
         }
       }
     });
@@ -484,7 +566,7 @@ export function AppProvider({ children }) {
       role: 'student',
       status: 'Activo',
       enrolledAt: new Date().toLocaleDateString('es-ES'),
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'
+      avatar: studentData.avatar || ''
     };
 
     setStudents((prev) => [newStudent, ...prev]);
@@ -583,7 +665,7 @@ export function AppProvider({ children }) {
       password: teacherData.password || 'docente123',
       role: 'teacher',
       status: 'Activo',
-      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80'
+      avatar: teacherData.avatar || ''
     };
 
     setTeachersList((prev) => [newTeacher, ...prev]);

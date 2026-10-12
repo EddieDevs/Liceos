@@ -12,7 +12,8 @@ import {
   MapPin,
   ChevronDown,
   LayoutDashboard,
-  Calendar
+  Calendar,
+  User
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
@@ -150,11 +151,17 @@ export default function Navbar() {
           <div className="hidden sm:flex items-center gap-3">
             {currentUser ? (
               <div className="flex items-center gap-3 bg-[#1A2B45] p-1.5 pr-3 rounded-lg border border-stitch-subtle shadow-md">
-                <img
-                  src={currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'}
-                  alt={currentUser.name}
-                  className="w-8 h-8 rounded-lg object-cover border border-[#DCB35C]/40"
-                />
+                {currentUser.avatar ? (
+                  <img
+                    src={currentUser.avatar}
+                    alt={currentUser.name}
+                    className="w-8 h-8 rounded-lg object-cover border border-[#DCB35C]/40"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-lg bg-[#223C63] border border-[#DCB35C]/50 flex items-center justify-center text-[#DCB35C] shrink-0">
+                    <User className="w-4 h-4" />
+                  </div>
+                )}
                 <div className="text-left text-xs">
                   <div className="font-semibold text-white max-w-[150px] truncate leading-tight">
                     {currentUser.name}

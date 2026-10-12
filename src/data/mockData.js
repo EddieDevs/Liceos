@@ -87,7 +87,7 @@ export const initialAdmin = {
   email: 'quinterostudent@gmail.com',
   password: 'admin',
   role: 'admin',
-  avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&auto=format&fit=crop&q=80',
+  avatar: '',
   phone: '+58 (414) 820-1122'
 };
 
