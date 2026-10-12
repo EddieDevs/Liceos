@@ -122,35 +122,46 @@ export default function AuthModal() {
 
       // 3. Teacher Login
       if (role === 'teacher') {
-        const matchedTeacher = teachersList.find(
-          (t) => t.email?.toLowerCase() === cleanEmail
+        let matchedTeacher = teachersList.find(
+          (t) => t.email?.trim().toLowerCase() === cleanEmail
         );
 
-        if (matchedTeacher) {
-          if (matchedTeacher.password && matchedTeacher.password !== password) {
-            setErrorMsg('Contraseña de docente incorrecta.');
-            setLoading(false);
-            return;
-          }
-          setCurrentUser({
-            ...matchedTeacher,
-            role: 'teacher'
-          });
-          setActiveTab('teacher-portal');
-          notify(`Bienvenido al portal docente, ${matchedTeacher.name}`);
-          setAuthModalOpen(false);
+        if (!matchedTeacher) {
+          try {
+            const { data: dbTeachers } = await supabase.from('teachers').select('*').ilike('email', cleanEmail);
+            if (dbTeachers && dbTeachers.length > 0) matchedTeacher = dbTeachers[0];
+          } catch (e) {}
+        }
+
+        if (!matchedTeacher) {
+          setErrorMsg('Este correo no está registrado en la nómina de docentes. Solo la Dirección puede registrar a los profesores.');
           setLoading(false);
           return;
         }
 
-        const { error } = await signInWithEmail(cleanEmail, password);
-        if (error) {
-          setErrorMsg('Credenciales docentes no encontradas en el registro del plantel.');
+        const expectedPass = matchedTeacher.password_plain || matchedTeacher.password || 'docente123';
+        if (password && password !== expectedPass) {
+          setErrorMsg('Contraseña de docente incorrecta.');
           setLoading(false);
           return;
         }
+
+        const teacherUser = {
+          id: matchedTeacher.id,
+          name: matchedTeacher.full_name || matchedTeacher.name || 'Docente Titular',
+          full_name: matchedTeacher.full_name || matchedTeacher.name || 'Docente Titular',
+          email: matchedTeacher.email,
+          cedula: matchedTeacher.cedula || '',
+          specialty: matchedTeacher.specialty || 'Educación Media General',
+          phone: matchedTeacher.phone || '',
+          role: 'teacher',
+          avatar: matchedTeacher.avatar_url || matchedTeacher.avatar || ''
+        };
+        setCurrentUser(teacherUser);
         setActiveTab('teacher-portal');
+        notify(`Bienvenido al portal docente, ${teacherUser.name}`);
         setAuthModalOpen(false);
+        setLoading(false);
         return;
       }
 
@@ -210,21 +221,19 @@ export default function AuthModal() {
     setErrorMsg('');
     try {
       if (role === 'student') {
-        notify('Los alumnos acceden con sus credenciales institucionales suministradas por el colegio.');
+        setErrorMsg('Los alumnos acceden exclusivamente con sus credenciales institucionales suministradas por el colegio.');
+        return;
       }
+
+      if (role === 'teacher') {
+        sessionStorage.setItem('iv_target_google_role', 'teacher');
+      } else if (role === 'representative') {
+        sessionStorage.setItem('iv_target_google_role', 'representative');
+      }
+
       const { error } = await signInWithGoogle();
       if (error) {
-        if (role === 'representative') {
-          setCurrentUser({
-            id: `rep-google-${Date.now()}`,
-            name: 'Representante Legal (Google)',
-            email: 'representante@gmail.com',
-            role: 'representative'
-          });
-          setActiveTab('representative-portal');
-          notify('Autenticación con Google exitosa.');
-          setAuthModalOpen(false);
-        }
+        setErrorMsg('Error al conectar con Google: ' + (error.message || ''));
       }
     } catch (err) {
       setErrorMsg(err.message || 'Error con Google');
@@ -329,6 +338,19 @@ export default function AuthModal() {
                 <div className="font-semibold text-[#f0c36d]">Matriculación Segura</div>
                 <p className="text-slate-300 text-[11px] leading-relaxed">
                   Por seguridad institucional, los estudiantes no se registran solos. Son matriculados por el Administrador, quien entrega las credenciales a sus representantes.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Teacher Security Notice */}
+          {role === 'teacher' && (
+            <div className="p-3 bg-[#1A2B45] border border-stitch-subtle rounded-xl flex items-start gap-2.5 text-xs">
+              <Info className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <div className="font-semibold text-indigo-300">Nómina Docente Oficial</div>
+                <p className="text-slate-300 text-[11px] leading-relaxed">
+                  Solo el personal docente matriculado por la Dirección puede acceder. Puedes ingresar con tus credenciales asignadas o con tu cuenta de Google si tu correo fue registrado.
                 </p>
               </div>
             </div>
@@ -458,8 +480,8 @@ export default function AuthModal() {
             </button>
           </form>
 
-          {/* Representative Google OAuth */}
-          {role === 'representative' && (
+          {/* Google OAuth for Representatives and Teachers */}
+          {(role === 'representative' || role === 'teacher') && (
             <div className="pt-2 border-t border-slate-700/60">
               <button
                 type="button"
@@ -472,7 +494,9 @@ export default function AuthModal() {
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
                 </svg>
-                <span>Acceder con Google</span>
+                <span>
+                  {role === 'teacher' ? 'Acceder como Docente con Google' : 'Acceder con Google'}
+                </span>
               </button>
             </div>
           )}

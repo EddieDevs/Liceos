@@ -22,6 +22,8 @@ import { useApp } from '../context/AppContext';
 export default function TeacherPortal() {
   const {
     currentUser,
+    setTargetAuthRole,
+    setAuthModalOpen,
     students,
     subjects,
     classrooms,
@@ -39,15 +41,42 @@ export default function TeacherPortal() {
     notify
   } = useApp();
 
+  // Guard: Ensure user is authenticated as teacher
+  if (!currentUser || currentUser.role !== 'teacher') {
+    return (
+      <div className="min-h-screen denim-pattern text-slate-100 flex items-center justify-center p-4">
+        <div className="denim-card p-8 max-w-md w-full text-center space-y-4 shadow-2xl">
+          <div className="w-16 h-16 rounded-2xl bg-[#223C63] border-2 border-[#DCB35C] flex items-center justify-center mx-auto text-[#DCB35C] shadow-lg">
+            <School className="w-8 h-8 text-[#DCB35C]" />
+          </div>
+          <h2 className="text-xl font-bold font-slab text-white">Portal de Docentes</h2>
+          <p className="text-xs text-slate-300">
+            Para consultar tu carga horaria, aulas y registrar calificaciones o planes de evaluación, debes iniciar sesión con tu cuenta oficial de docente.
+          </p>
+          <button
+            onClick={() => {
+              setTargetAuthRole('teacher');
+              setAuthModalOpen(true);
+            }}
+            className="w-full py-2.5 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab rounded-lg text-xs shadow-md cursor-pointer hover:brightness-105 transition"
+          >
+            Iniciar Sesión como Docente
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const [activeSubTab, setActiveSubTab] = useState('my-schedule'); // 'my-schedule', 'grades', 'plans', 'attendance'
   const [selectedSubject, setSelectedSubject] = useState(subjects[0]?.name || '');
   const [selectedTerm, setSelectedTerm] = useState('1er Lapso');
 
-  const currentTeacher = currentUser || {
-    id: 'teacher-temp',
-    name: 'Docente Titular',
-    email: 'docente@integralvenezuela.edu.ve',
-    specialty: 'Ciencias y Letras'
+  const currentTeacher = {
+    id: currentUser.id || 'teacher-temp',
+    name: currentUser.full_name || currentUser.name || 'Docente Titular',
+    email: currentUser.email || 'docente@integralvenezuela.edu.ve',
+    specialty: currentUser.specialty || 'Educación Media General',
+    avatar: currentUser.avatar || currentUser.avatar_url || ''
   };
 
   const activeYear = institution.currentSchoolYear || '2027-2028';
@@ -75,20 +104,20 @@ export default function TeacherPortal() {
     studentId: students[0]?.id || '',
     studentName: students[0]?.name || '',
     subjectName: subjects[0]?.name || '',
-    evaluationTitle: 'Evaluación Parcial Escrita',
-    score: 18,
+    evaluationTitle: '',
+    score: 20,
     maxScore: 20,
     percentage: 20,
     term: '1er Lapso',
-    comments: 'Buen dominio teórico'
+    comments: ''
   });
 
-  // Plan Form State
+  // Plan Form State (Empty by default)
   const [planModalOpen, setPlanModalOpen] = useState(false);
   const [planFormData, setPlanFormData] = useState({
     subjectName: subjects[0]?.name || '',
-    unit_title: 'Unidad I: Fundamentos y Conceptos Básicos',
-    strategy: 'Taller Práctico Grupal',
+    unit_title: '',
+    strategy: 'Evaluación Escrita',
     instrument: 'Escala de Estimación',
     percentage: 20,
     lapso: 1,
@@ -102,7 +131,7 @@ export default function TeacherPortal() {
     studentName: students[0]?.name || '',
     date: new Date().toISOString().split('T')[0],
     status: 'ausente',
-    reason: 'Inasistencia a clase sin justificación previa.',
+    reason: '',
   });
 
   // Handle Free Module submit
@@ -158,9 +187,17 @@ export default function TeacherPortal() {
         {/* Header Profile Summary */}
         <div className="denim-card p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-[#223C63] border-2 border-[#DCB35C] flex items-center justify-center text-[#DCB35C] shadow-lg">
-              <School className="w-8 h-8 text-[#DCB35C]" />
-            </div>
+            {currentTeacher.avatar ? (
+              <img
+                src={currentTeacher.avatar}
+                alt={currentTeacher.name}
+                className="w-14 h-14 rounded-2xl object-cover border-2 border-[#DCB35C] shadow-lg"
+              />
+            ) : (
+              <div className="w-14 h-14 rounded-2xl bg-[#223C63] border-2 border-[#DCB35C] flex items-center justify-center text-[#DCB35C] shadow-lg">
+                <School className="w-8 h-8 text-[#DCB35C]" />
+              </div>
+            )}
             <div>
               <div className="inline-flex items-center gap-2 denim-patch px-2.5 py-0.5 text-[11px] mb-1">
                 <Sparkles className="w-3 h-3 text-[#DCB35C]" />

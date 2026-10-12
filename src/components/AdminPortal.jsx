@@ -269,7 +269,7 @@ export default function AdminPortal() {
       password: stu.password || stu.password_plain || 'estudiante123',
       representativeName: stu.representativeName || stu.representative_name || '',
       phone: stu.phone || '',
-      avatar: stu.avatar || stu.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'
+      avatar: stu.avatar || stu.avatar_url || ''
     });
     setEditStudentModalOpen(true);
   };
@@ -549,11 +549,17 @@ export default function AdminPortal() {
                         <tr key={stu.id} className="hover:bg-[#1A2B45]/60 transition">
                           <td className="py-3.5 px-4">
                             <div className="flex items-center gap-3">
-                              <img
-                                src={stu.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'}
-                                alt=""
-                                className="w-8 h-8 rounded-lg object-cover border border-slate-700"
-                              />
+                              {stu.avatar || stu.avatar_url ? (
+                                <img
+                                  src={stu.avatar || stu.avatar_url}
+                                  alt=""
+                                  className="w-8 h-8 rounded-lg object-cover border border-slate-700"
+                                />
+                              ) : (
+                                <div className="w-8 h-8 rounded-lg bg-[#223C63] border border-slate-700 flex items-center justify-center text-[#DCB35C] shrink-0">
+                                  <User className="w-4 h-4" />
+                                </div>
+                              )}
                               <div>
                                 <div className="font-bold text-white font-slab">{stu.name}</div>
                                 <div className="text-[11px] text-slate-400 font-mono">{stu.email}</div>
@@ -745,11 +751,17 @@ export default function AdminPortal() {
                   <div key={t.id} className="denim-card p-5 space-y-3">
                     <div className="flex justify-between items-start">
                       <div className="flex items-center gap-3">
-                        <img
-                          src={t.avatar || 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80'}
-                          alt=""
-                          className="w-11 h-11 rounded-xl object-cover border border-[#DCB35C]/50"
-                        />
+                        {t.avatar || t.avatar_url ? (
+                          <img
+                            src={t.avatar || t.avatar_url}
+                            alt=""
+                            className="w-11 h-11 rounded-xl object-cover border border-[#DCB35C]/50"
+                          />
+                        ) : (
+                          <div className="w-11 h-11 rounded-xl bg-[#223C63] border border-[#DCB35C]/50 flex items-center justify-center text-[#DCB35C] shrink-0">
+                            <User className="w-5 h-5" />
+                          </div>
+                        )}
                         <div>
                           <h3 className="font-bold text-white text-sm font-slab">{t.name}</h3>
                           <div className="text-[11px] text-[#f0c36d] font-mono">C.I: {t.cedula || 'Pendiente'}</div>
@@ -1547,11 +1559,17 @@ export default function AdminPortal() {
             <form onSubmit={handleEditStudentSubmit} className="space-y-3.5 text-xs">
               {/* Photo preview and upload */}
               <div className="flex items-center gap-4 p-3 rounded-lg bg-[#101c30] border border-slate-700/80">
-                <img
-                  src={editStudentForm.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'}
-                  alt="Preview"
-                  className="w-14 h-16 rounded-lg object-cover border border-[#DCB35C]/50 shadow-sm"
-                />
+                {editStudentForm.avatar ? (
+                  <img
+                    src={editStudentForm.avatar}
+                    alt="Preview"
+                    className="w-14 h-16 rounded-lg object-cover border border-[#DCB35C]/50 shadow-sm"
+                  />
+                ) : (
+                  <div className="w-14 h-16 rounded-lg bg-[#101c30] border border-[#DCB35C]/50 flex items-center justify-center text-[#DCB35C] shadow-sm">
+                    <User className="w-7 h-7" />
+                  </div>
+                )}
                 <div className="space-y-1">
                   <span className="text-[11px] font-semibold text-slate-300 block">Fotografía del Carnet y Expediente</span>
                   <button
@@ -1925,14 +1943,41 @@ export default function AdminPortal() {
                 </div>
                 <div>
                   <label className="block text-slate-300 mb-1 font-medium">Área / Especialidad</label>
-                  <input
-                    type="text"
+                  <select
                     required
-                    placeholder="Matemáticas, Física..."
                     value={teacherForm.specialty}
                     onChange={(e) => setTeacherForm({ ...teacherForm, specialty: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
-                  />
+                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
+                  >
+                    <option value="">-- Seleccionar Asignatura / Cátedra --</option>
+                    {subjects.length > 0 && (
+                      <optgroup label="Asignaturas Creadas en el Sistema">
+                        {subjects.map((sub) => (
+                          <option key={sub.id} value={sub.name}>
+                            {sub.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    <optgroup label="Cátedras de Bachillerato">
+                      <option value="Castellano y Literatura">Castellano y Literatura</option>
+                      <option value="Matemáticas">Matemáticas</option>
+                      <option value="Física">Física</option>
+                      <option value="Química">Química</option>
+                      <option value="Biología">Biología</option>
+                      <option value="Ciencias Naturales">Ciencias Naturales</option>
+                      <option value="Geografía, Historia y Ciudadanía">Geografía, Historia y Ciudadanía</option>
+                      <option value="Historia de Venezuela">Historia de Venezuela</option>
+                      <option value="Formación para la Soberanía Nacional">Formación para la Soberanía Nacional</option>
+                      <option value="Inglés">Inglés</option>
+                      <option value="Educación Física">Educación Física</option>
+                      <option value="Orientación y Convivencia">Orientación y Convivencia</option>
+                      <option value="Informática y Computación">Informática y Computación</option>
+                      <option value="Arte y Patrimonio">Arte y Patrimonio</option>
+                      <option value="Ciencias de la Tierra">Ciencias de la Tierra</option>
+                      <option value="Filosofía y Lógica">Filosofía y Lógica</option>
+                    </optgroup>
+                  </select>
                 </div>
               </div>
 
