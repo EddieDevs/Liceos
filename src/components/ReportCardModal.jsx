@@ -74,18 +74,21 @@ export default function ReportCardModal({ student, grades, subjects, onClose }) 
         <div className="p-8 sm:p-12 bg-white text-slate-900 font-sans">
           {/* Header */}
           <div className="border-b-2 border-slate-900 pb-4 mb-6 flex justify-between items-start">
-            <div>
-              <div className="text-[10px] uppercase font-bold tracking-wider text-[#1E3A8A]">
-                República Bolivariana de Venezuela • Zona Educativa de Anzoátegui
-              </div>
-              <h1 className="text-xl font-black font-slab text-slate-950 uppercase mt-0.5">
-                U.E. Colegio Integral Venezuela
-              </h1>
-              <p className="text-xs italic font-serif text-[#B87333]">
-                "Enseñando a vivir" • Fundado el 10 de noviembre de 1989
-              </p>
-              <div className="text-[10px] text-slate-500 font-mono">
-                Calle 11, sector Colinas del Neverí, Barcelona, Anzoátegui • Código DEA
+            <div className="flex items-start gap-4">
+              <img src="/logo.png" alt="Sello Institucional" className="w-14 h-14 object-contain mt-1" />
+              <div>
+                <div className="text-[10px] uppercase font-bold tracking-wider text-[#1E3A8A]">
+                  República Bolivariana de Venezuela • Zona Educativa de Anzoátegui
+                </div>
+                <h1 className="text-xl font-black font-slab text-slate-950 uppercase mt-0.5">
+                  U.E. Colegio Integral Venezuela
+                </h1>
+                <p className="text-xs italic font-serif text-[#B87333]">
+                  "Enseñando a vivir" • Fundado el 10 de noviembre de 1989
+                </p>
+                <div className="text-[10px] text-slate-500 font-mono">
+                  Calle 11, sector Colinas del Neverí, Barcelona, Anzoátegui • Código DEA
+                </div>
               </div>
             </div>
 

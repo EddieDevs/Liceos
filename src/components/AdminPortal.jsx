@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   CreditCard,
   Users,
@@ -29,11 +29,14 @@ import {
   ArrowUpRight,
   AlertTriangle,
   RotateCcw,
-  Sparkles
+  Sparkles,
+  Upload,
+  Camera
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import CertificateModal from './CertificateModal';
 import ReportCardModal from './ReportCardModal';
+import { readFileAsDataURL } from '../lib/fileUpload';
 
 export default function AdminPortal() {
   const {
@@ -43,11 +46,13 @@ export default function AdminPortal() {
     updateAdminCredentials,
     students,
     enrollStudent,
+    updateStudent,
     deleteStudent,
     promoteSchoolYear,
     emptyStudentsDatabase,
     sections,
     addSection,
+    updateSection,
     deleteSection,
     teachersList,
     addTeacher,
@@ -63,6 +68,8 @@ export default function AdminPortal() {
     deleteScheduleBlock,
     classrooms,
     addClassroom,
+    updateClassroom,
+    deleteClassroom,
     payments,
     updatePaymentStatus,
     certificates,
@@ -103,8 +110,36 @@ export default function AdminPortal() {
   const [promoteConfirmOpen, setPromoteConfirmOpen] = useState(false);
   const [wipeConfirmOpen, setWipeConfirmOpen] = useState(false);
 
+  // Editing Student Modal State
+  const [editStudentModalOpen, setEditStudentModalOpen] = useState(false);
+  const [editingStudentId, setEditingStudentId] = useState(null);
+  const [editStudentForm, setEditStudentForm] = useState({
+    firstName: '',
+    lastName: '',
+    cedula: '',
+    gradeYear: '1er Año',
+    section: 'Sección A',
+    email: '',
+    password: '',
+    representativeName: '',
+    phone: '',
+    avatar: ''
+  });
+  const editStudentPhotoInputRef = useRef(null);
+
+  // Classroom Modal State (Add & Edit)
+  const [classroomModalOpen, setClassroomModalOpen] = useState(false);
+  const [editingClassroomId, setEditingClassroomId] = useState(null);
+  const [classroomForm, setClassroomForm] = useState({
+    name: '',
+    building: 'Sede Principal',
+    capacity: 35,
+    status: 'disponible'
+  });
+
   // Requisito 4: Section Modal
   const [sectionModalOpen, setSectionModalOpen] = useState(false);
+  const [editingSectionId, setEditingSectionId] = useState(null);
   const [sectionForm, setSectionForm] = useState({
     year: '1er Año',
     section: 'A',
@@ -218,11 +253,116 @@ export default function AdminPortal() {
     });
   };
 
-  // Handler for adding section (Requisito 4)
+  // Handlers for Student Editing
+  const handleOpenEditStudent = (stu) => {
+    setEditingStudentId(stu.id);
+    const names = (stu.name || stu.full_name || '').split(' ');
+    const first = stu.firstName || stu.first_name || names[0] || '';
+    const last = stu.lastName || stu.last_name || names.slice(1).join(' ') || '';
+    setEditStudentForm({
+      firstName: first,
+      lastName: last,
+      cedula: stu.cedula || '',
+      gradeYear: stu.grade_year || stu.gradeLevel || '1er Año',
+      section: stu.section || 'Sección A',
+      email: stu.email || '',
+      password: stu.password || stu.password_plain || 'estudiante123',
+      representativeName: stu.representativeName || stu.representative_name || '',
+      phone: stu.phone || '',
+      avatar: stu.avatar || stu.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'
+    });
+    setEditStudentModalOpen(true);
+  };
+
+  const handleStudentPhotoChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        const dataUrl = await readFileAsDataURL(file);
+        setEditStudentForm((prev) => ({ ...prev, avatar: dataUrl }));
+        notify('Fotografía cargada lista para guardar');
+      } catch (err) {
+        notify('Error al procesar la imagen', 'error');
+      }
+    }
+  };
+
+  const handleEditStudentSubmit = (e) => {
+    e.preventDefault();
+    if (!editingStudentId) return;
+    updateStudent(editingStudentId, editStudentForm);
+    setEditStudentModalOpen(false);
+    setEditingStudentId(null);
+  };
+
+  // Handlers for Classrooms
+  const handleOpenAddClassroom = () => {
+    setEditingClassroomId(null);
+    setClassroomForm({
+      name: `Aula ${String(classrooms.length + 1).padStart(2, '0')}`,
+      building: 'Sede Principal',
+      capacity: 35,
+      status: 'disponible'
+    });
+    setClassroomModalOpen(true);
+  };
+
+  const handleOpenEditClassroom = (clr) => {
+    setEditingClassroomId(clr.id);
+    setClassroomForm({
+      name: clr.name,
+      building: clr.building || 'Sede Principal',
+      capacity: clr.capacity || 35,
+      status: clr.status || 'disponible'
+    });
+    setClassroomModalOpen(true);
+  };
+
+  const handleClassroomSubmit = (e) => {
+    e.preventDefault();
+    if (editingClassroomId) {
+      updateClassroom(editingClassroomId, classroomForm);
+    } else {
+      addClassroom(classroomForm);
+    }
+    setClassroomModalOpen(false);
+    setEditingClassroomId(null);
+  };
+
+  // Handlers for Sections
+  const handleOpenAddSection = () => {
+    setEditingSectionId(null);
+    setSectionForm({
+      year: '1er Año',
+      section: 'A',
+      capacity: 35,
+      classroom: classrooms[0]?.name || 'Aula 01',
+      guideTeacher: teachersList[0]?.name || 'Por asignar'
+    });
+    setSectionModalOpen(true);
+  };
+
+  const handleOpenEditSection = (sec) => {
+    setEditingSectionId(sec.id);
+    setSectionForm({
+      year: sec.year || sec.grade_year || '1er Año',
+      section: sec.section || sec.section_letter || 'A',
+      capacity: sec.capacity || 35,
+      classroom: sec.classroom || classrooms[0]?.name || 'Aula 01',
+      guideTeacher: sec.guideTeacher || sec.guide_teacher || teachersList[0]?.name || 'Por asignar'
+    });
+    setSectionModalOpen(true);
+  };
+
   const handleSectionSubmit = (e) => {
     e.preventDefault();
-    addSection(sectionForm);
+    if (editingSectionId) {
+      updateSection(editingSectionId, sectionForm);
+    } else {
+      addSection(sectionForm);
+    }
     setSectionModalOpen(false);
+    setEditingSectionId(null);
   };
 
   // Handler for updating admin credentials (Requisito 8)
@@ -444,6 +584,13 @@ export default function AdminPortal() {
                           <td className="py-3.5 px-4 text-right">
                             <div className="flex items-center justify-end gap-1.5">
                               <button
+                                onClick={() => handleOpenEditStudent(stu)}
+                                title="Editar Estudiante"
+                                className="p-1.5 text-slate-400 hover:text-[#DCB35C] hover:bg-[#101c30] rounded-lg transition cursor-pointer"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
                                 onClick={() => setPreviewReportCardStudent(stu)}
                                 title="Ver Boletín"
                                 className="p-1.5 text-slate-400 hover:text-[#f0c36d] hover:bg-[#101c30] rounded-lg transition cursor-pointer"
@@ -482,8 +629,8 @@ export default function AdminPortal() {
                 </p>
               </div>
               <button
-                onClick={() => setSectionModalOpen(true)}
-                className="px-4 py-2.5 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab text-xs rounded-xl shadow-md flex items-center gap-2 cursor-pointer"
+                onClick={handleOpenAddSection}
+                className="px-4 py-2 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab text-xs rounded-lg shadow-md flex items-center gap-2 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>Agregar Sección</span>
@@ -503,13 +650,22 @@ export default function AdminPortal() {
                         <span className="denim-patch px-2 py-0.5 text-[10px]">{sec.year}</span>
                         <h3 className="text-lg font-bold font-slab text-white mt-1">Sección {sec.section}</h3>
                       </div>
-                      <button
-                        onClick={() => deleteSection(sec.id)}
-                        className="p-1 text-slate-500 hover:text-rose-400 rounded-lg transition opacity-0 group-hover:opacity-100"
-                        title="Eliminar Sección"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                        <button
+                          onClick={() => handleOpenEditSection(sec)}
+                          className="p-1 text-slate-400 hover:text-[#DCB35C] rounded-lg transition cursor-pointer"
+                          title="Editar Sección"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => deleteSection(sec.id)}
+                          className="p-1 text-slate-500 hover:text-rose-400 rounded-lg transition cursor-pointer"
+                          title="Eliminar Sección"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
 
                     <div className="space-y-1.5 text-xs text-slate-300 pt-2 border-t border-slate-700/60">
@@ -739,7 +895,7 @@ export default function AdminPortal() {
               </div>
               <button
                 onClick={() => setSchedModalOpen(true)}
-                className="px-4 py-2.5 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab text-xs rounded-xl shadow-md flex items-center gap-2 cursor-pointer"
+                className="px-4 py-2 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab text-xs rounded-lg shadow-md flex items-center gap-2 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>Agregar Bloque de Horario</span>
@@ -753,38 +909,56 @@ export default function AdminPortal() {
                   <div key={day} className="denim-card p-4 space-y-3">
                     <div className="font-bold font-slab text-sm text-[#f0c36d] border-b border-slate-700/60 pb-1 flex justify-between items-center">
                       <span>{day}</span>
-                      <span className="text-[10px] text-slate-400">{dayBlocks.length} bloques</span>
+                      <span className="text-[10px] text-slate-400 font-mono">{dayBlocks.length} bloques</span>
                     </div>
 
                     {dayBlocks.length === 0 ? (
                       <div className="text-[11px] text-slate-500 italic py-3 text-center">Sin actividades</div>
                     ) : (
-                      dayBlocks.map((b) => (
-                        <div
-                          key={b.id}
-                          className={`p-2.5 rounded-xl border text-xs space-y-1 relative group ${
-                            b.entry_type === 'day_off'
-                              ? 'bg-rose-950/40 border-rose-500/40 text-rose-200'
-                              : b.entry_type === 'recess'
-                              ? 'bg-amber-950/40 border-amber-500/40 text-amber-200'
-                              : 'bg-[#101c30] border-slate-700 text-slate-200'
-                          }`}
-                        >
-                          <div className="flex justify-between items-start">
-                            <strong className="text-white font-slab text-xs">{b.subject_name || b.subject || 'Bloque'}</strong>
-                            <button
-                              onClick={() => deleteScheduleBlock(b.id)}
-                              className="text-slate-400 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
+                      dayBlocks.map((b) => {
+                        const isRecess = b.entry_type === 'recess' || b.subject_name?.toLowerCase().includes('receso') || b.subject?.toLowerCase().includes('receso');
+                        const isDayOff = b.entry_type === 'day_off';
+                        const isFree = b.entry_type === 'free_module';
+                        const title = isRecess
+                          ? 'Receso'
+                          : (isDayOff ? 'Día Libre' : (isFree ? 'Módulo Libre' : (b.subject_name || b.subject || 'Clase Regular')));
 
-                          <div className="text-[10px] text-slate-400 font-mono">{b.start_time} - {b.end_time || b.time}</div>
-                          {b.classroom_name && <div className="text-[10px] text-[#DCB35C]">Aula: {b.classroom_name}</div>}
-                          {b.teacher_name && <div className="text-[10px] text-slate-400">Docente: {b.teacher_name}</div>}
-                        </div>
-                      ))
+                        return (
+                          <div
+                            key={b.id}
+                            className={`p-2.5 rounded-lg border text-xs space-y-1 relative group ${
+                              isDayOff
+                                ? 'bg-rose-950/40 border-rose-500/40 text-rose-200'
+                                : isRecess
+                                ? 'bg-amber-950/40 border-amber-500/40 text-amber-200'
+                                : isFree
+                                ? 'bg-blue-950/40 border-blue-500/40 text-blue-200'
+                                : 'bg-[#101c30] border-slate-700 text-slate-200'
+                            }`}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div className="flex items-center gap-1.5">
+                                <strong className="text-white font-slab text-xs">{title}</strong>
+                                {isRecess && (
+                                  <span className="text-[9px] bg-amber-500/20 text-[#f0c36d] px-1.5 py-0.2 rounded font-mono">
+                                    Receso
+                                  </span>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => deleteScheduleBlock(b.id)}
+                                className="text-slate-400 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition cursor-pointer"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+
+                            <div className="text-[10px] text-slate-400 font-mono">{b.start_time || b.time?.split('-')[0]?.trim()} - {b.end_time || b.time?.split('-')[1]?.trim() || b.time}</div>
+                            {b.classroom_name && <div className="text-[10px] text-[#DCB35C]">Aula: {b.classroom_name}</div>}
+                            {b.teacher_name && <div className="text-[10px] text-slate-400">Docente: {b.teacher_name}</div>}
+                          </div>
+                        );
+                      })
                     )}
                   </div>
                 );
@@ -1001,18 +1175,43 @@ export default function AdminPortal() {
         {/* ============================================================== */}
         {activeSubTab === 'classrooms' && (
           <div className="space-y-6 animate-fade-in">
-            <div className="denim-card p-6 flex justify-between items-center">
+            <div className="denim-card p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
                 <h2 className="text-base font-bold font-slab text-white">Espacios y Aulas</h2>
                 <p className="text-xs text-slate-400">Aulas disponibles para asignar a secciones y horarios</p>
               </div>
+              <button
+                onClick={handleOpenAddClassroom}
+                className="px-4 py-2 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab text-xs rounded-lg shadow-md flex items-center gap-2 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Agregar Nueva Aula</span>
+              </button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {classrooms.map((c) => (
-                <div key={c.id} className="denim-card p-4 space-y-2">
-                  <div className="font-bold text-white font-slab text-sm">{c.name}</div>
-                  <div className="text-xs text-slate-400">Edificio: {c.building}</div>
+                <div key={c.id} className="denim-card p-4 space-y-2 relative group">
+                  <div className="flex justify-between items-start">
+                    <div className="font-bold text-white font-slab text-sm">{c.name}</div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                      <button
+                        onClick={() => handleOpenEditClassroom(c)}
+                        className="p-1 text-slate-400 hover:text-[#DCB35C] rounded-lg transition cursor-pointer"
+                        title="Editar Aula"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => deleteClassroom(c.id)}
+                        className="p-1 text-slate-400 hover:text-rose-400 rounded-lg transition cursor-pointer"
+                        title="Eliminar Aula"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="text-xs text-slate-400">Edificio: {c.building || 'Sede Principal'}</div>
                   <div className="text-xs text-[#DCB35C]">Capacidad: {c.capacity} pupitres</div>
                 </div>
               ))}
@@ -1325,14 +1524,269 @@ export default function AdminPortal() {
       )}
 
       {/* ============================================================== */}
-      {/* MODAL 5: AGREGAR SECCIÓN (Requisito 4)                         */}
+      {/* MODAL: EDITAR EXPEDIENTE ESTUDIANTE                            */}
+      {/* ============================================================== */}
+      {editStudentModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in overflow-y-auto">
+          <div className="bg-[#152338] border border-stitch rounded-lg w-full max-w-lg p-6 text-white my-6">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h3 className="text-lg font-bold font-slab text-white flex items-center gap-2">
+                  <Edit2 className="w-5 h-5 text-[#DCB35C]" />
+                  <span>Editar Estudiante</span>
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Modifica datos personales, sección, credenciales y fotografía oficial
+                </p>
+              </div>
+              <button onClick={() => setEditStudentModalOpen(false)} className="text-slate-400 hover:text-white cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditStudentSubmit} className="space-y-3.5 text-xs">
+              {/* Photo preview and upload */}
+              <div className="flex items-center gap-4 p-3 rounded-lg bg-[#101c30] border border-slate-700/80">
+                <img
+                  src={editStudentForm.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'}
+                  alt="Preview"
+                  className="w-14 h-16 rounded-lg object-cover border border-[#DCB35C]/50 shadow-sm"
+                />
+                <div className="space-y-1">
+                  <span className="text-[11px] font-semibold text-slate-300 block">Fotografía del Carnet y Expediente</span>
+                  <button
+                    type="button"
+                    onClick={() => editStudentPhotoInputRef.current?.click()}
+                    className="px-3 py-1.5 bg-[#223C63] hover:bg-[#1A2B45] border border-[#DCB35C]/40 rounded-lg text-white font-bold font-slab text-[11px] flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-[#DCB35C]" />
+                    <span>Subir Nueva Foto</span>
+                  </button>
+                  <input
+                    type="file"
+                    ref={editStudentPhotoInputRef}
+                    accept="image/*"
+                    onChange={handleStudentPhotoChange}
+                    className="hidden"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 mb-1 font-medium">Nombres</label>
+                  <input
+                    type="text"
+                    required
+                    value={editStudentForm.firstName}
+                    onChange={(e) => setEditStudentForm({ ...editStudentForm, firstName: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-300 mb-1 font-medium">Apellidos</label>
+                  <input
+                    type="text"
+                    required
+                    value={editStudentForm.lastName}
+                    onChange={(e) => setEditStudentForm({ ...editStudentForm, lastName: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 mb-1 font-medium">Cédula de Identidad</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="V-31.000.000"
+                    value={editStudentForm.cedula}
+                    onChange={(e) => setEditStudentForm({ ...editStudentForm, cedula: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-300 mb-1 font-medium">Año que Cursa</label>
+                  <select
+                    value={editStudentForm.gradeYear}
+                    onChange={(e) => setEditStudentForm({ ...editStudentForm, gradeYear: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
+                  >
+                    <option value="1er Año">1er Año</option>
+                    <option value="2do Año">2do Año</option>
+                    <option value="3er Año">3er Año</option>
+                    <option value="4to Año">4to Año</option>
+                    <option value="5to Año">5to Año</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 mb-1 font-medium">Sección</label>
+                  <select
+                    value={editStudentForm.section}
+                    onChange={(e) => setEditStudentForm({ ...editStudentForm, section: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
+                  >
+                    <option value="Sección A">Sección A</option>
+                    <option value="Sección B">Sección B</option>
+                    <option value="Sección C">Sección C</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-300 mb-1 font-medium">Teléfono de Contacto</label>
+                  <input
+                    type="text"
+                    value={editStudentForm.phone}
+                    onChange={(e) => setEditStudentForm({ ...editStudentForm, phone: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 mb-1 font-medium">Representante Legal</label>
+                <input
+                  type="text"
+                  placeholder="Nombre y Apellido del Padre o Tutor"
+                  value={editStudentForm.representativeName}
+                  onChange={(e) => setEditStudentForm({ ...editStudentForm, representativeName: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 mb-1 font-medium">Correo Institucional</label>
+                  <input
+                    type="email"
+                    required
+                    value={editStudentForm.email}
+                    onChange={(e) => setEditStudentForm({ ...editStudentForm, email: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-300 mb-1 font-medium">Contraseña de Acceso</label>
+                  <input
+                    type="text"
+                    required
+                    value={editStudentForm.password}
+                    onChange={(e) => setEditStudentForm({ ...editStudentForm, password: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setEditStudentModalOpen(false)}
+                  className="px-4 py-2 text-slate-400 hover:text-white cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab rounded-lg shadow-md cursor-pointer flex items-center gap-2"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>Guardar Cambios</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL: AGREGAR / EDITAR AULA                                   */}
+      {/* ============================================================== */}
+      {classroomModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+          <div className="bg-[#152338] border border-stitch rounded-lg w-full max-w-md p-6 text-white space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-700/60 pb-3">
+              <h3 className="text-base font-bold font-slab text-white">
+                {editingClassroomId ? 'Editar Espacio o Aula' : 'Agregar Nueva Aula'}
+              </h3>
+              <button onClick={() => setClassroomModalOpen(false)} className="text-slate-400 hover:text-white cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleClassroomSubmit} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block text-slate-300 mb-1 font-medium">Nombre o Código del Aula</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. Aula 01 / Laboratorio de Química"
+                  value={classroomForm.name}
+                  onChange={(e) => setClassroomForm({ ...classroomForm, name: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 mb-1 font-medium">Edificio / Ubicación</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. Sede Principal / Módulo B / Ala Este"
+                  value={classroomForm.building}
+                  onChange={(e) => setClassroomForm({ ...classroomForm, building: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 mb-1 font-medium">Capacidad de Pupitres (Estudiantes)</label>
+                <input
+                  type="number"
+                  required
+                  min="1"
+                  max="100"
+                  value={classroomForm.capacity}
+                  onChange={(e) => setClassroomForm({ ...classroomForm, capacity: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C] focus:outline-hidden font-mono"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setClassroomModalOpen(false)}
+                  className="px-4 py-2 text-slate-400 hover:text-white cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab rounded-lg shadow-md cursor-pointer flex items-center gap-2"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>{editingClassroomId ? 'Guardar Cambios' : 'Crear Aula'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL 5: AGREGAR / EDITAR SECCIÓN (Requisito 4)                 */}
       {/* ============================================================== */}
       {sectionModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
-          <div className="bg-[#152338] border border-stitch rounded-2xl w-full max-w-md p-6 text-white space-y-4">
+          <div className="bg-[#152338] border border-stitch rounded-lg w-full max-w-md p-6 text-white space-y-4">
             <div className="flex justify-between items-center border-b border-slate-700/60 pb-3">
-              <h3 className="text-base font-bold font-slab text-white">Agregar Sección Escolar</h3>
-              <button onClick={() => setSectionModalOpen(false)} className="text-slate-400 hover:text-white">
+              <h3 className="text-base font-bold font-slab text-white">
+                {editingSectionId ? 'Editar Sección Escolar' : 'Agregar Sección Escolar'}
+              </h3>
+              <button onClick={() => setSectionModalOpen(false)} className="text-slate-400 hover:text-white cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1344,7 +1798,7 @@ export default function AdminPortal() {
                   <select
                     value={sectionForm.year}
                     onChange={(e) => setSectionForm({ ...sectionForm, year: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
+                    className="w-full px-3 py-2 rounded-lg bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
                   >
                     <option value="1er Año">1er Año</option>
                     <option value="2do Año">2do Año</option>
@@ -1359,7 +1813,7 @@ export default function AdminPortal() {
                   <select
                     value={sectionForm.section}
                     onChange={(e) => setSectionForm({ ...sectionForm, section: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
+                    className="w-full px-3 py-2 rounded-lg bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
                   >
                     <option value="A">Sección A</option>
                     <option value="B">Sección B</option>
@@ -1374,7 +1828,7 @@ export default function AdminPortal() {
                 <select
                   value={sectionForm.classroom}
                   onChange={(e) => setSectionForm({ ...sectionForm, classroom: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
+                  className="w-full px-3 py-2 rounded-lg bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
                 >
                   {classrooms.map((c) => (
                     <option key={c.id} value={c.name}>{c.name} ({c.building})</option>
@@ -1388,7 +1842,7 @@ export default function AdminPortal() {
                 <select
                   value={sectionForm.guideTeacher}
                   onChange={(e) => setSectionForm({ ...sectionForm, guideTeacher: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
+                  className="w-full px-3 py-2 rounded-lg bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
                 >
                   <option value="Por asignar">Por asignar</option>
                   {teachersList.map((t) => (
@@ -1405,7 +1859,7 @@ export default function AdminPortal() {
                   max="45"
                   value={sectionForm.capacity}
                   onChange={(e) => setSectionForm({ ...sectionForm, capacity: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
+                  className="w-full px-3 py-2 rounded-lg bg-[#101c30] border border-slate-700 text-white focus:border-[#DCB35C]"
                 />
               </div>
 
@@ -1413,15 +1867,15 @@ export default function AdminPortal() {
                 <button
                   type="button"
                   onClick={() => setSectionModalOpen(false)}
-                  className="px-4 py-2 text-slate-400 hover:text-white"
+                  className="px-4 py-2 text-slate-400 hover:text-white cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab rounded-xl shadow-md"
+                  className="px-5 py-2.5 bg-gradient-to-r from-[#DCB35C] to-[#f0c36d] text-[#1A2B45] font-bold font-slab rounded-lg shadow-md cursor-pointer"
                 >
-                  Guardar Sección
+                  {editingSectionId ? 'Guardar Cambios' : 'Guardar Sección'}
                 </button>
               </div>
             </form>
