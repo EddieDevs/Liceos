@@ -133,6 +133,11 @@ export function AppProvider({ children }) {
     return saved ? JSON.parse(saved) : initialAnnouncements;
   });
 
+  const [admissionRequests, setAdmissionRequests] = useState(() => {
+    const saved = localStorage.getItem('iv_admission_requests');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [supabaseConnected, setSupabaseConnected] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
 
@@ -144,6 +149,10 @@ export function AppProvider({ children }) {
   };
 
   // Sync to localStorage
+  useEffect(() => {
+    localStorage.setItem('iv_admission_requests', JSON.stringify(admissionRequests));
+  }, [admissionRequests]);
+
   useEffect(() => {
     localStorage.setItem('iv_institution', JSON.stringify(institution));
   }, [institution]);
@@ -368,12 +377,22 @@ export function AppProvider({ children }) {
             id: a.id,
             studentId: a.student_id || a.studentId,
             studentName: a.student_name || a.studentName,
+            grade_year: a.grade_year,
             date: a.date,
             status: a.status || 'ausente',
-            reason: a.reason || ''
+            reason: a.reason || '',
+            reported_by: a.reported_by || 'Docente'
           }));
           setAttendances(normAtt);
         }
+
+        // Fetch admission requests
+        try {
+          const { data: admData } = await supabase.from('admission_requests').select('*').order('created_at', { ascending: false });
+          if (admData && admData.length > 0) {
+            setAdmissionRequests(admData);
+          }
+        } catch (e) {}
       } catch (err) {
         setSupabaseConnected(false);
       }
@@ -413,12 +432,12 @@ export function AppProvider({ children }) {
         }
 
         // Teacher role evaluation
-        if (targetGoogleRole === 'teacher' || (matchedTeacher && targetGoogleRole !== 'representative')) {
+        if (targetGoogleRole === 'teacher' || (matchedTeacher && targetGoogleRole !== 'representative' && targetGoogleRole !== 'student')) {
           if (!matchedTeacher) {
             await supabase.auth.signOut();
             setCurrentUser(null);
             setActiveTab('home');
-            notify('Este correo de Google no se encuentra registrado en la nómina oficial de docentes.', 'error');
+            notify(`Este correo de Google (${user.email}) no se encuentra registrado en la nómina oficial de docentes.`, 'error');
             return;
           }
 
@@ -440,6 +459,90 @@ export function AppProvider({ children }) {
           return;
         }
 
+        // Check if user is a registered student
+        let matchedStudent = null;
+        try {
+          const { data: dbStudents } = await supabase
+            .from('students')
+            .select('*')
+            .ilike('email', user.email);
+          if (dbStudents && dbStudents.length > 0) {
+            matchedStudent = dbStudents[0];
+          }
+        } catch (e) {}
+
+        if (!matchedStudent) {
+          matchedStudent = students.find(
+            (s) => s.email?.trim().toLowerCase() === user.email?.trim().toLowerCase()
+          );
+        }
+
+        // Student role evaluation
+        if (targetGoogleRole === 'student' || (matchedStudent && targetGoogleRole !== 'representative')) {
+          if (!matchedStudent) {
+            await supabase.auth.signOut();
+            setCurrentUser(null);
+            setActiveTab('home');
+            notify(`Acceso denegado: El correo (${user.email}) no está registrado en la nómina de estudiantes por Control de Estudios.`, 'error');
+            return;
+          }
+
+          const studentUser = {
+            id: matchedStudent.id,
+            name: matchedStudent.full_name || matchedStudent.name || `${matchedStudent.first_name || ''} ${matchedStudent.last_name || ''}`.trim() || user.user_metadata?.full_name || 'Estudiante',
+            email: matchedStudent.email || user.email,
+            cedula: matchedStudent.cedula || '',
+            role: 'student',
+            gradeLevel: matchedStudent.grade_year || matchedStudent.gradeLevel || '1er Año',
+            section: matchedStudent.section || 'Sección A',
+            avatar: matchedStudent.avatar_url || matchedStudent.avatar || '',
+            isSupabaseUser: true
+          };
+          setCurrentUser(studentUser);
+          setActiveTab('student-portal');
+          notify(`Bienvenido al portal estudiantil, ${studentUser.name}`);
+          return;
+        }
+
+        // Representative role evaluation
+        if (targetGoogleRole === 'representative') {
+          try {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', user.id)
+              .single();
+
+            const userObj = {
+              id: user.id,
+              email: user.email,
+              name: profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0],
+              cedula: profile?.cedula || '',
+              role: 'representative',
+              avatar: profile?.avatar_url || user.user_metadata?.avatar_url || '',
+              isSupabaseUser: true,
+            };
+            setCurrentUser(userObj);
+            setActiveTab('representative-portal');
+            notify('Bienvenido al Portal de Representantes');
+            return;
+          } catch (e) {
+            const userObj = {
+              id: user.id,
+              email: user.email,
+              name: user.user_metadata?.full_name || user.email?.split('@')[0],
+              role: 'representative',
+              avatar: '',
+              isSupabaseUser: true,
+            };
+            setCurrentUser(userObj);
+            setActiveTab('representative-portal');
+            notify('Bienvenido al Portal de Representantes');
+            return;
+          }
+        }
+
+        // If no role specified, check if existing profile exists as representative
         try {
           const { data: profile } = await supabase
             .from('profiles')
@@ -447,35 +550,29 @@ export function AppProvider({ children }) {
             .eq('id', user.id)
             .single();
 
-          const resolvedRole = profile?.role || user.user_metadata?.role || 'representative';
+          if (profile && profile.role === 'representative') {
+            const userObj = {
+              id: user.id,
+              email: user.email,
+              name: profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0],
+              cedula: profile?.cedula || '',
+              role: 'representative',
+              avatar: profile?.avatar_url || '',
+              isSupabaseUser: true,
+            };
+            setCurrentUser(userObj);
+            setActiveTab('representative-portal');
+            notify('Bienvenido al Portal de Representantes');
+            return;
+          }
+        } catch (e) {}
 
-          const userObj = {
-            id: user.id,
-            email: user.email,
-            name: profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0],
-            cedula: profile?.cedula || '',
-            role: resolvedRole,
-            gradeLevel: profile?.grade_level || user.user_metadata?.grade_level || '1er Año',
-            section: profile?.section || 'Sección A',
-            avatar: profile?.avatar_url || user.user_metadata?.avatar_url || '',
-            isSupabaseUser: true,
-          };
-          setCurrentUser(userObj);
-
-          if (resolvedRole === 'representative') setActiveTab('representative-portal');
-          else setActiveTab('student-portal');
-        } catch (e) {
-          const userObj = {
-            id: user.id,
-            email: user.email,
-            name: user.email?.split('@')[0],
-            role: 'representative',
-            avatar: '',
-            isSupabaseUser: true,
-          };
-          setCurrentUser(userObj);
-          setActiveTab('representative-portal');
-        }
+        // REJECT ANY UNRECOGNIZED GOOGLE LOGIN (Security Requirement 3)
+        await supabase.auth.signOut();
+        setCurrentUser(null);
+        setActiveTab('home');
+        notify(`El correo (${user.email}) no tiene una cuenta asignada en el colegio. Si eres estudiante, debes ser registrado por la Dirección.`, 'error');
+        return;
       }
     });
 
@@ -1254,6 +1351,8 @@ export function AppProvider({ children }) {
     const newPlan = {
       id: `plan-${Date.now()}`,
       status: 'Programado',
+      grade_year: planData.grade_year || planData.gradeYear || '1er Año',
+      gradeYear: planData.grade_year || planData.gradeYear || '1er Año',
       ...planData
     };
     setEvaluationPlans((prev) => [newPlan, ...prev]);
@@ -1263,6 +1362,7 @@ export function AppProvider({ children }) {
         await supabase.from('evaluation_plans').insert({
           id: newPlan.id,
           subject_name: newPlan.subjectName || newPlan.subject_name || 'General',
+          grade_year: newPlan.grade_year || newPlan.gradeYear || '1er Año',
           unit_title: newPlan.unit_title || newPlan.title || 'Unidad de Evaluación',
           strategy: newPlan.strategy || 'Evaluación Escrita',
           instrument: newPlan.instrument || 'Escala de Estimación',
@@ -1275,7 +1375,7 @@ export function AppProvider({ children }) {
       }
     } catch (e) {}
 
-    notify('Plan de evaluación publicado con éxito');
+    notify(`Plan de evaluación publicado para ${newPlan.grade_year}`);
     return newPlan;
   };
 
@@ -1293,8 +1393,9 @@ export function AppProvider({ children }) {
   const recordAttendance = async (attData) => {
     const newAtt = {
       id: `att-${Date.now()}`,
-      date: new Date().toISOString().split('T')[0],
+      date: attData.date || new Date().toISOString().split('T')[0],
       notified: true,
+      reported_by: attData.reported_by || 'Docente Titular',
       ...attData
     };
     setAttendances((prev) => [newAtt, ...prev]);
@@ -1305,15 +1406,100 @@ export function AppProvider({ children }) {
           id: newAtt.id,
           student_id: newAtt.studentId || newAtt.student_id,
           student_name: newAtt.studentName || newAtt.student_name,
+          grade_year: newAtt.grade_year || newAtt.gradeYear || '',
           date: newAtt.date,
           status: newAtt.status || 'ausente',
-          reason: newAtt.reason || ''
+          reason: newAtt.reason || '',
+          reported_by: newAtt.reported_by || 'Docente Titular'
         });
       }
     } catch (e) {}
 
     notify('Inasistencia registrada en el expediente');
     return newAtt;
+  };
+
+  // Requisito 6: Justificación / Reporte de Faltas por Representantes
+  const reportAbsence = async (data) => {
+    const newAtt = {
+      id: `att-${Date.now()}`,
+      studentId: data.studentId,
+      studentName: data.studentName,
+      grade_year: data.gradeYear || data.grade_year || '1er Año',
+      date: data.date || new Date().toISOString().split('T')[0],
+      status: 'justificada',
+      reason: data.reason || 'Inasistencia justificada',
+      notes: data.notes || '',
+      reported_by: 'Representante Legal',
+      notified: true
+    };
+    setAttendances((prev) => [newAtt, ...prev]);
+
+    try {
+      if (supabaseConnected) {
+        await supabase.from('attendances').insert({
+          id: newAtt.id,
+          student_id: newAtt.studentId,
+          student_name: newAtt.studentName,
+          grade_year: newAtt.grade_year,
+          date: newAtt.date,
+          status: 'justificada',
+          reason: `${newAtt.reason}${newAtt.notes ? ` - ${newAtt.notes}` : ''}`,
+          reported_by: 'Representante Legal'
+        });
+      }
+    } catch (e) {}
+
+    notify(`Falta justificada de ${newAtt.studentName} notificada a la Dirección`);
+    return newAtt;
+  };
+
+  // Requisito 1: Gestión de Solicitudes de Cupo (Admissions)
+  const addAdmissionRequest = async (req) => {
+    const newReq = {
+      id: req.id || `adm-${Date.now()}`,
+      parent_name: req.parent_name || req.parentName,
+      phone: req.phone,
+      email: req.email,
+      student_grade: req.student_grade || req.studentGrade || '1er Año',
+      message: req.message || '',
+      status: 'pendiente',
+      created_at: new Date().toISOString()
+    };
+    setAdmissionRequests((prev) => [newReq, ...prev]);
+    try {
+      if (supabaseConnected) {
+        await supabase.from('admission_requests').insert([newReq]);
+      }
+    } catch (e) {}
+    notify('Solicitud de cupo registrada en el sistema.');
+    return newReq;
+  };
+
+  const updateAdmissionStatus = async (id, newStatus, notes = '') => {
+    setAdmissionRequests((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, status: newStatus, notes: notes || r.notes } : r))
+    );
+    try {
+      if (supabaseConnected) {
+        await supabase.from('admission_requests').update({
+          status: newStatus,
+          notes: notes,
+          updated_at: new Date().toISOString()
+        }).eq('id', id);
+      }
+    } catch (e) {}
+    notify(`Estado de solicitud cambiado a: ${newStatus}`);
+  };
+
+  const deleteAdmissionRequest = async (id) => {
+    setAdmissionRequests((prev) => prev.filter((r) => r.id !== id));
+    try {
+      if (supabaseConnected) {
+        await supabase.from('admission_requests').delete().eq('id', id);
+      }
+    } catch (e) {}
+    notify('Solicitud eliminada');
   };
 
   // CLASSROOMS
@@ -1442,6 +1628,11 @@ export function AppProvider({ children }) {
         deleteScheduleBlock,
         attendances,
         recordAttendance,
+        reportAbsence,
+        admissionRequests,
+        addAdmissionRequest,
+        updateAdmissionStatus,
+        deleteAdmissionRequest,
         certificates,
         addCertificate,
         updateCertificate,

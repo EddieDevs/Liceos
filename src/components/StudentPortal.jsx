@@ -26,6 +26,8 @@ import {
 import { useApp } from '../context/AppContext';
 import CertificateModal from './CertificateModal';
 import ReportCardModal from './ReportCardModal';
+import SchedulePrintModal from './SchedulePrintModal';
+import PlanPrintModal from './PlanPrintModal';
 import { readFileAsDataURL } from '../lib/fileUpload';
 
 export default function StudentPortal() {
@@ -49,6 +51,8 @@ export default function StudentPortal() {
   const [selectedTerm, setSelectedTerm] = useState('1er Lapso');
   const [selectedCertificate, setSelectedCertificate] = useState(null);
   const [reportCardModalOpen, setReportCardModalOpen] = useState(false);
+  const [schedulePrintModalOpen, setSchedulePrintModalOpen] = useState(false);
+  const [planPrintModalOpen, setPlanPrintModalOpen] = useState(false);
 
   // Student object (Solo Lectura - Administrado por Dirección)
   const student = {
@@ -426,9 +430,18 @@ export default function StudentPortal() {
         {/* SUBTAB: SCHEDULE */}
         {activeSubTab === 'schedule' && (
           <div className="denim-card p-6 space-y-4 animate-fade-in">
-            <div>
-              <h2 className="text-base font-bold font-slab text-white">Horario de Clases y Actividades</h2>
-              <p className="text-xs text-slate-400">Distribución semanal para {student.gradeLevel} ({student.section})</p>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-700/60 pb-3">
+              <div>
+                <h2 className="text-base font-bold font-slab text-white">Horario de Clases y Actividades</h2>
+                <p className="text-xs text-slate-400">Distribución semanal para {student.gradeLevel} ({student.section})</p>
+              </div>
+              <button
+                onClick={() => setSchedulePrintModalOpen(true)}
+                className="px-3.5 py-1.5 bg-[#223C63] hover:bg-[#1A2B45] text-white border border-[#DCB35C]/40 rounded-xl text-xs font-bold font-slab flex items-center gap-1.5 cursor-pointer shadow-sm"
+              >
+                <Printer className="w-3.5 h-3.5 text-[#DCB35C]" />
+                <span>Imprimir Horario (PDF)</span>
+              </button>
             </div>
 
             {schedules.length === 0 ? (
@@ -494,75 +507,94 @@ export default function StudentPortal() {
         )}
 
         {/* SUBTAB: EVALUATION PLANS */}
-        {activeSubTab === 'plans' && (
-          <div className="denim-card p-6 space-y-5 animate-fade-in">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-700/60 pb-3">
-              <div>
-                <h2 className="text-base font-bold font-slab text-white">Planes de Evaluación</h2>
-                <p className="text-xs text-slate-400">
-                  Cronograma pedagógico, instrumentos y ponderaciones para {student.gradeLevel} ({activeYear})
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                {['1er Lapso', '2do Lapso', '3er Lapso'].map((term) => (
-                  <button
-                    key={term}
-                    onClick={() => setSelectedTerm(term)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold font-slab transition cursor-pointer ${
-                      selectedTerm === term
-                        ? 'bg-[#223C63] text-white border border-[#DCB35C]/50 shadow-xs'
-                        : 'bg-[#152338] text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    {term}
-                  </button>
-                ))}
-              </div>
-            </div>
+        {activeSubTab === 'plans' && (() => {
+          const termNum = selectedTerm.charAt(0);
+          const studentPlans = evaluationPlans.filter((p) => {
+            const planGrade = p.grade_year || p.gradeYear;
+            const matchesGrade = !planGrade || planGrade.toLowerCase().trim() === student.gradeLevel.toLowerCase().trim();
+            const matchesLapso = !selectedTerm || String(p.lapso) === termNum || p.lapso === selectedTerm;
+            return matchesGrade && matchesLapso;
+          });
 
-            {evaluationPlans.length === 0 ? (
-              <div className="p-8 text-center rounded-lg bg-[#101c30] border-stitch-subtle">
-                <Calendar className="w-8 h-8 text-slate-500 mx-auto mb-2" />
-                <div className="font-bold text-slate-300 font-slab">No hay planes de evaluación cargados</div>
-                <p className="text-xs text-slate-500 mt-1">Los docentes publicarán las fechas y ponderaciones de cada unidad aquí.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {evaluationPlans.map((plan) => (
-                  <div key={plan.id} className="p-4 rounded-lg bg-[#101c30] border border-slate-700/80 space-y-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <span className="denim-patch px-2 py-0.5 text-[10px]">
-                          {plan.subjectName || plan.subject || 'Asignatura'}
-                        </span>
-                        <h3 className="font-bold text-white text-sm font-slab mt-1.5">{plan.unit_title || plan.title || 'Unidad de Evaluación'}</h3>
-                      </div>
-                      <span className="px-2.5 py-1 rounded bg-[#223C63] text-[#f0c36d] font-mono text-xs font-bold border border-[#DCB35C]/30 shrink-0">
-                        {plan.percentage || 20}%
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-xs text-slate-300 pt-2 border-t border-slate-800">
-                      <div>
-                        <span className="text-[10px] text-slate-400 uppercase block">Estrategia:</span>
-                        <span>{plan.strategy || 'Evaluación Escrita'}</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] text-slate-400 uppercase block">Instrumento:</span>
-                        <span>{plan.instrument || 'Escala de Estimación'}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between items-center text-[11px] text-slate-400 pt-1 font-mono">
-                      <span>Fecha: {plan.evaluation_date || plan.date || 'Por anunciar'}</span>
-                      <span className="text-[#DCB35C] font-semibold">{plan.lapso ? `${plan.lapso}° Lapso` : selectedTerm}</span>
-                    </div>
+          return (
+            <div className="denim-card p-6 space-y-5 animate-fade-in">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-700/60 pb-3">
+                <div>
+                  <h2 className="text-base font-bold font-slab text-white">Planes de Evaluación</h2>
+                  <p className="text-xs text-slate-400">
+                    Cronograma pedagógico, instrumentos y ponderaciones para {student.gradeLevel} ({activeYear})
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-1.5">
+                    {['1er Lapso', '2do Lapso', '3er Lapso'].map((term) => (
+                      <button
+                        key={term}
+                        onClick={() => setSelectedTerm(term)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold font-slab transition cursor-pointer ${
+                          selectedTerm === term
+                            ? 'bg-[#223C63] text-white border border-[#DCB35C]/50 shadow-xs'
+                            : 'bg-[#152338] text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        {term}
+                      </button>
+                    ))}
                   </div>
-                ))}
+                  <button
+                    onClick={() => setPlanPrintModalOpen(true)}
+                    className="px-3.5 py-1.5 bg-[#223C63] hover:bg-[#1A2B45] text-[#f0c36d] border border-[#DCB35C]/40 rounded-xl text-xs font-bold font-slab flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-[#DCB35C]" />
+                    <span>Imprimir Plan (PDF)</span>
+                  </button>
+                </div>
               </div>
-            )}
-          </div>
-        )}
+
+              {studentPlans.length === 0 ? (
+                <div className="p-8 text-center rounded-lg bg-[#101c30] border-stitch-subtle">
+                  <Calendar className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+                  <div className="font-bold text-slate-300 font-slab">No hay planes de evaluación cargados</div>
+                  <p className="text-xs text-slate-500 mt-1">Los docentes publicarán las fechas y ponderaciones de cada unidad para {student.gradeLevel} aquí.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {studentPlans.map((plan) => (
+                    <div key={plan.id} className="p-4 rounded-lg bg-[#101c30] border border-slate-700/80 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="denim-patch px-2 py-0.5 text-[10px]">
+                            {plan.subjectName || plan.subject_name || plan.subject || 'Asignatura'}
+                          </span>
+                          <h3 className="font-bold text-white text-sm font-slab mt-1.5">{plan.unit_title || plan.title || 'Unidad de Evaluación'}</h3>
+                        </div>
+                        <span className="px-2.5 py-1 rounded bg-[#223C63] text-[#f0c36d] font-mono text-xs font-bold border border-[#DCB35C]/30 shrink-0">
+                          {plan.percentage || 20}%
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs text-slate-300 pt-2 border-t border-slate-800">
+                        <div>
+                          <span className="text-[10px] text-slate-400 uppercase block">Estrategia:</span>
+                          <span>{plan.strategy || 'Evaluación Escrita'}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 uppercase block">Instrumento:</span>
+                          <span>{plan.instrument || 'Escala de Estimación'}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center text-[11px] text-slate-400 pt-1 font-mono">
+                        <span>Fecha: {plan.evaluation_date || plan.date || 'Por anunciar'}</span>
+                        <span className="text-[#DCB35C] font-semibold">{plan.lapso ? `${plan.lapso}° Lapso` : selectedTerm}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* SUBTAB: CERTIFICATES */}
         {activeSubTab === 'certificates' && (
@@ -865,6 +897,24 @@ export default function StudentPortal() {
           grades={grades}
           subjects={subjects}
           onClose={() => setReportCardModalOpen(false)}
+        />
+      )}
+
+      {/* Official Schedule Print Modal */}
+      {schedulePrintModalOpen && (
+        <SchedulePrintModal
+          student={student}
+          schedules={schedules}
+          onClose={() => setSchedulePrintModalOpen(false)}
+        />
+      )}
+
+      {/* Official Evaluation Plan Print Modal */}
+      {planPrintModalOpen && (
+        <PlanPrintModal
+          student={student}
+          plans={evaluationPlans}
+          onClose={() => setPlanPrintModalOpen(false)}
         />
       )}
     </div>

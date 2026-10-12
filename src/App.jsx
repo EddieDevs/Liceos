@@ -8,6 +8,7 @@ import TeacherPortal from './components/TeacherPortal';
 import AdminPortal from './components/AdminPortal';
 import AuthModal from './components/AuthModal';
 import Toast from './components/Toast';
+import FloatingContactButtons from './components/FloatingContactButtons';
 
 function MainLayout() {
   const { activeTab } = useApp();
@@ -24,6 +25,7 @@ function MainLayout() {
         {activeTab === 'admin-portal' && <AdminPortal />}
       </main>
 
+      <FloatingContactButtons />
       <AuthModal />
       <Toast />
     </div>
